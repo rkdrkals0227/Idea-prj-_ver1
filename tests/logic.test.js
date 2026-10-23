@@ -71,7 +71,7 @@ test("edge-connected flood preserves enclosed white animal and transparent alpha
 });
 test("review gate, literal text and duplicate work ID merge", () => {
   assert.equal(approved(defaults.sources).length, 0);
-  assert.equal(approved(defaults.quizzes).length, 3);
+  assert.equal(approved(defaults.quizzes).length, 25);
   assert.equal(
     escapeHTML('<img onerror="x">'),
     "&lt;img onerror=&quot;x&quot;&gt;",
@@ -89,4 +89,71 @@ test("predecode PNG dimensions", () => {
   v.setUint32(16, 8000);
   v.setUint32(20, 6000);
   assert.deepEqual(imageDimensions(b), [8000, 6000]);
+});
+
+import {
+  quizPool,
+  upgradeQuizContent,
+  extraQuizzes,
+} from "../src/data/learning.js";
+test("each resident and place owns a distinct reviewed quiz pool; no unrelated fallback", () => {
+  const ids = new Set();
+  for (const context of [
+    "otter",
+    "turtle",
+    "crane",
+    "house",
+    "postman",
+    "library",
+    "forest",
+    "apartment",
+  ]) {
+    const pool = quizPool(defaults, context);
+    assert.equal(pool.length, 3, context);
+    for (const q of pool) {
+      assert.ok(!ids.has(q.id), q.id);
+      ids.add(q.id);
+    }
+  }
+  assert.deepEqual(quizPool(defaults, "unknown"), []);
+  assert.deepEqual(quizPool(defaults, "source:festival"), []);
+  const c = structuredClone(defaults);
+  c.quizzes = c.quizzes.map((q) => ({
+    ...q,
+    reviewStatus: q.contexts.includes("postman") ? "검토 필요" : q.reviewStatus,
+  }));
+  assert.deepEqual(quizPool(c, "postman"), []);
+});
+test("older teacher data upgrades once without losing custom text, reviews or deleted questions", () => {
+  const c = structuredClone(defaults);
+  delete c.quizRoutingVersion;
+  c.quizzes = c.quizzes.filter((q) => !extraQuizzes.some((e) => e.id === q.id));
+  for (const q of c.quizzes) delete q.contexts;
+  c.dialogues.otter.story = "선생님이 쓴 물결 이야기";
+  c.quizzes[0].question = "수정한 안전 문제";
+  const upgraded = upgradeQuizContent(c);
+  assert.equal(upgraded.dialogues.otter.story, c.dialogues.otter.story);
+  assert.equal(upgraded.quizzes[0].question, c.quizzes[0].question);
+  assert.equal(quizPool(upgraded, "otter").length, 3);
+  assert.equal(
+    upgraded.quizzes.find((q) => q.id === "q-river").reviewStatus,
+    "검토 필요",
+  );
+  upgraded.quizzes = upgraded.quizzes.filter((q) => q.id !== "q-river-care");
+  assert.deepEqual(upgradeQuizContent(upgraded), upgraded);
+});
+
+test("source quizzes require both approved source and its own approved question", () => {
+  const c = structuredClone(defaults),
+    source = c.sources.find((s) => s.id === "festival");
+  source.reviewStatus = "검토 완료";
+  source.checkedAt = "2026-10-23";
+  assert.deepEqual(quizPool(c, "source:festival"), []);
+  c.quizzes.find((q) => q.id === "q-river").reviewStatus = "검토 완료";
+  assert.deepEqual(
+    quizPool(c, "source:festival").map((q) => q.id),
+    ["q-river"],
+  );
+  source.reviewStatus = "검토 필요";
+  assert.deepEqual(quizPool(c, "source:festival"), []);
 });

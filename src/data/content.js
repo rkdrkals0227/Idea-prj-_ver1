@@ -1,3 +1,8 @@
+import {
+  extraQuizzes,
+  defaultQuizContexts,
+  residentThemes,
+} from "./learning.js";
 export const sources = [
   {
     id: "geumsan",
@@ -65,6 +70,7 @@ export const sources = [
   },
 ];
 export const defaults = {
+  quizRoutingVersion: 2,
   schoolName: "금산새봄학교",
   className: "4학년 마을탐험반",
   meetingDate: "2026-10-23",
@@ -304,3 +310,10 @@ export const habitats = {
   forest: { name: "숲", x: -18, z: -14, r: 3 },
   grass: { name: "풀밭", x: -14, z: 10, r: 3 },
 };
+
+for (const q of defaults.quizzes)
+  q.contexts = [...(defaultQuizContexts[q.id] || [])];
+defaults.quizzes.push(...extraQuizzes);
+
+for (const [id, theme] of Object.entries(residentThemes))
+  defaults.dialogues[id].story = theme.text;

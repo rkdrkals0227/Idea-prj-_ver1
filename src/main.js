@@ -2,6 +2,12 @@ import "./style.css";
 import { World } from "./world.js";
 import { defaults, habitats } from "./data/content.js";
 import {
+  quizPool,
+  quizContextLabels,
+  upgradeQuizContent,
+  residentThemes,
+} from "./data/learning.js";
+import {
   initialState,
   startQuest,
   collect,
@@ -84,12 +90,19 @@ function open(title, html, width = "") {
   return modal.querySelector(".modal-body");
 }
 const ui = { open, close, toast };
-setStorageReporter(message => toast(message, true));
+setStorageReporter((message) => toast(message, true));
 state = loadState();
-content = loadContent(defaults);
-try { validateState(state); validateContent(content); } catch {
- state = initialState(); content = structuredClone(defaults);
- toast("저장 자료 형식을 읽지 못했어요. 원본은 자동으로 지우지 않았어요. 백업 파일을 확인하거나 다른 브라우저에서 열어 주세요.", true);
+content = upgradeQuizContent(loadContent(defaults));
+try {
+  validateState(state);
+  validateContent(content);
+} catch {
+  state = initialState();
+  content = structuredClone(defaults);
+  toast(
+    "저장 자료 형식을 읽지 못했어요. 원본은 자동으로 지우지 않았어요. 백업 파일을 확인하거나 다른 브라우저에서 열어 주세요.",
+    true,
+  );
 }
 function persist() {
   reconcile(state, content);
@@ -189,60 +202,101 @@ function talk(id) {
         : state.started.includes(qid)
           ? "during"
           : "before"
-      : "before";
+      : key === "postman"
+        ? state.letters.length
+          ? "after"
+          : Object.keys(state.letterDraft).length
+            ? "during"
+            : "before"
+        : state.read.length ||
+            state.quiz.some((id) =>
+              quizPool(content, "crane").some((q) => q.id === id),
+            )
+          ? "after"
+          : "before";
   const root = open(
     d.name,
-    `<p class="eyebrow">VILLAGE FRIENDS · 가상의 동물 주민</p><div class="card"><p>${h(d[stage])}</p></div><div class="stack actions"><button id="story">우리 지역 이야기</button><button id="quiz">퀴즈 풀기</button><button id="help">${qid ? "도와줄 일이 있나요?" : key === "postman" ? "편지 쓰기" : "도서관 책장 보기"}</button><button id="bye">다음에 이야기해요</button></div>`,
+    `<p class="eyebrow">VILLAGE FRIENDS · 가상의 동물 주민</p><div class="card"><p>${h(d[stage])}</p></div><div class="stack actions"><button id="story">${h(residentThemes[key].title)}</button><button id="quiz">퀴즈 풀기</button><button id="help">${qid ? "도와줄 일이 있나요?" : key === "postman" ? "편지 쓰기" : "도서관 책장 보기"}</button><button id="bye">다음에 이야기해요</button></div>`,
   );
   root.querySelector("#story").onclick = () => {
     const r = open(
-      d.name,
-      `<p>${h(d.story)}</p><p class="notice">주민은 가상 인물이에요. 실제 서식 기록은 출처를 확인한 별도 자료로 살펴봐요.</p><button id="books">지역 자료 보기</button>`,
+      residentThemes[key].title,
+      `<p>${h(d.story)}</p>${["otter", "turtle", "crane"].includes(key) ? '<p class="notice">가상의 주민과 나누는 이야기예요. 실제 지역의 역사·서식 기록은 출처를 확인한 자료로 살펴봐요.</p>' : ""}<div class="actions"><button id="topic-quiz" class="primary">이 이야기의 퀴즈</button><button id="topic-action">${key === "postman" ? "내 편지 쓰기" : qid ? "관련 활동 살펴보기" : "도서관 자료 보기"}</button></div>`,
     );
-    r.querySelector("#books").onclick = books;
+    r.querySelector("#topic-quiz").onclick = () => quiz(key);
+    r.querySelector("#topic-action").onclick = () =>
+      key === "postman" ? letter() : qid ? questInfo(qid) : books();
   };
-  root.querySelector("#quiz").onclick = () =>
-    quiz(key === "turtle" ? "q-wild" : key === "otter" ? "q-path" : "q-legend");
+  root.querySelector("#quiz").onclick = () => quiz(key);
   root.querySelector("#help").onclick = () =>
     qid ? questInfo(qid) : key === "postman" ? letter() : books();
   root.querySelector("#bye").onclick = close;
 }
-function quiz(id) {
-  const list = approved(content.quizzes);
-  const q = list.find((q) => q.id === id) || list[0];
+function quiz(context, requestedId = null) {
+  const list = quizPool(content, context);
+  const topic =
+    quizContextLabels[context] ||
+    content.sources.find((s) => context === "source:" + s.id)?.sourceTitle ||
+    "관련 자료";
+  if (!list.length) {
+    open(
+      topic + " · 퀴즈 준비 중",
+      "<p>이 주제에서 교사가 검토한 퀴즈가 아직 없어요. 다른 주제의 문제로 바꾸지 않고, 수업 자료가 준비될 때까지 기다려요.</p>",
+    );
+    return;
+  }
+  const q = requestedId
+    ? list.find((q) => q.id === requestedId)
+    : list.find((q) => !state.quiz.includes(q.id));
   if (!q) {
-    toast("교사가 검토한 퀴즈가 아직 없어요.");
+    const root = open(
+      topic + " · 주제 마무리",
+      `<p>이 주제의 퀴즈 ${list.length}개를 모두 풀었어요! 다른 주민과 장소도 찾아가 보세요.</p><h3>다시 생각해 보고 싶은 문제</h3><div class="stack">${list.map((q, i) => `<button data-review="${h(q.id)}">${i + 1}. ${h(q.question)}</button>`).join("")}</div>`,
+    );
+    root
+      .querySelectorAll("[data-review]")
+      .forEach((b) => (b.onclick = () => quiz(context, b.dataset.review)));
     return;
   }
   const root = open(
-    "생각이 자라는 퀴즈",
-    `<span class="badge">${h(q.kind || "사실 퀴즈")} · ${h(q.difficulty)}</span><h3>${h(q.question)}</h3><div class="stack">${q.options.map((o, i) => `<button data-answer="${i}">${i + 1}. ${h(o)}</button>`).join("")}</div><div id="answer" aria-live="polite"></div><p class="small">관련 장소: ${h(q.place)}<br>출처: ${h(q.sourceTitle)} · ${h(q.sourceYear || "연도 미상")}<br>확인일: ${h(q.checkedAt || "미상")}</p>${q.sourceUrl ? `<a href="${h(safeUrl(q.sourceUrl))}" target="_blank" rel="noopener noreferrer">출처 확인 ↗</a>` : ""}`,
+    topic + " · 퀴즈",
+    `<p class="eyebrow">이 주제의 문제 ${list.indexOf(q) + 1} / ${list.length}</p><span class="badge">${h(q.kind || "사실 퀴즈")} · ${h(q.difficulty)}</span><h3>${h(q.question)}</h3><div class="stack">${q.options.map((o, i) => `<button data-answer="${i}">${i + 1}. ${h(o)}</button>`).join("")}</div><div id="answer" aria-live="polite"></div><p class="small">관련 장소: ${h(q.place)}<br>출처: ${h(q.sourceTitle)} · ${h(q.sourceYear || "연도 미상")}<br>확인일: ${h(q.checkedAt || "미상")}</p>${q.sourceUrl ? `<a href="${h(safeUrl(q.sourceUrl))}" target="_blank" rel="noopener noreferrer">출처 확인 ↗</a>` : ""}`,
   );
   root.querySelectorAll("[data-answer]").forEach(
     (b) =>
       (b.onclick = () => {
-        const correct = +b.dataset.answer === q.answer;
-        const a = root.querySelector("#answer");
+        const correct = +b.dataset.answer === q.answer,
+          a = root.querySelector("#answer");
         a.className = "feedback";
         a.textContent = correct
           ? `✓ 맞았어요! ${q.explanation}`
           : `다시 생각해 볼까요? ${q.explanation}`;
-        if (correct) {
-          if (!state.quiz.includes(q.id)) state.quiz.push(q.id);
-          if (!state.badges.includes("생각 새싹"))
-            state.badges.push("생각 새싹");
-          persist();
-          root
-            .querySelectorAll("[data-answer]")
-            .forEach((x) => (x.disabled = true));
-          const next = document.createElement("button");
-          next.textContent = "다른 퀴즈 풀기";
-          next.onclick = () =>
-            quiz(list[(list.indexOf(q) + 1) % list.length].id);
-          a.append(document.createElement("br"), next);
-        }
+        if (!correct) return;
+        if (!state.quiz.includes(q.id)) state.quiz.push(q.id);
+        if (!state.badges.includes("생각 새싹")) state.badges.push("생각 새싹");
+        persist();
+        root
+          .querySelectorAll("[data-answer]")
+          .forEach((b) => (b.disabled = true));
+        const next = document.createElement("button");
+        next.textContent = list.some((q) => !state.quiz.includes(q.id))
+          ? "이 주제의 다음 문제"
+          : "이 주제 마무리";
+        next.onclick = () => quiz(context);
+        a.append(document.createElement("br"), next);
       }),
   );
+}
+function placeStory(id) {
+  const text =
+    id === "forest"
+      ? "이 숲길에서는 작은 싹과 새소리를 찾아보자. 정해진 길에서 조용히 관찰하고, 본 것과 추측한 것을 나누어 기록해 봐."
+      : "여러 가족이 함께 쓰는 복도와 화단이 있는 곳이야. 이웃의 어려움을 듣고, 함께 지킬 수 있는 약속을 생각해 보자.";
+  const root = open(
+    quizContextLabels[id],
+    `<p>${h(text)}</p><button class="primary" id="quiz">이곳의 퀴즈 풀기</button>`,
+  );
+  root.querySelector("#quiz").onclick = () => quiz(id);
 }
 function safeUrl(url) {
   try {
@@ -269,7 +323,7 @@ function books() {
       )
       .join(
         "",
-      )}<article class="card"><h3>♧ 우리 반 생태 도감</h3><p>학생이 직접 관찰하고 만든 작품을 만나요.</p><button id="catalog">도감 펼치기</button></article><article class="card"><h3>함께 쓰는 마을</h3><p>주민을 배려하는 행동을 생각해요.</p><button id="quiz">생활 퀴즈 풀기</button></article></div><p class="small">지역 원문에 접근할 수 없어 초기 지역 자료는 검토 초안이에요. 확인되지 않은 내용은 학생용 사실 카드로 표시하지 않아요.</p>`,
+      )}<article class="card"><h3>♧ 우리 반 생태 도감</h3><p>학생이 직접 관찰하고 만든 작품을 만나요.</p><button id="catalog">도감 펼치기</button></article><article class="card"><h3>자료를 읽는 탐험가</h3><p>출처·조사연도·관찰 기록을 살펴봐요.</p><button id="quiz">자료 읽기 퀴즈</button></article></div><p class="small">지역 원문에 접근할 수 없어 초기 지역 자료는 검토 초안이에요. 확인되지 않은 내용은 학생용 사실 카드로 표시하지 않아요.</p>`,
     "wide",
   );
   root.querySelectorAll("[data-book]").forEach(
@@ -285,17 +339,11 @@ function books() {
           persist();
           toast("읽은 자료로 기록했어요. 학교에서 돌아볼 수 있어요.");
         };
-        r.querySelector("#quiz").onclick = () =>
-          quiz(
-            content.quizzes.find(
-              (q) =>
-                q.sourceUrl === c.sourceUrl && q.reviewStatus === "검토 완료",
-            )?.id,
-          );
+        r.querySelector("#quiz").onclick = () => quiz("source:" + c.id);
       }),
   );
   root.querySelector("#catalog").onclick = catalog;
-  root.querySelector("#quiz").onclick = () => quiz("q-path");
+  root.querySelector("#quiz").onclick = () => quiz("library");
 }
 function pathPuzzle() {
   if (state.path) {
@@ -835,6 +883,14 @@ function validateContent(c) {
       throw new Error("안건의 미션 연결을 확인해 주세요.");
   for (const q of c.quizzes) {
     if (
+      q.contexts !== undefined &&
+      (!Array.isArray(q.contexts) ||
+        !q.contexts.every((k) => Object.hasOwn(quizContextLabels, k)))
+    )
+      throw new Error(
+        "퀴즈 contexts는 otter, turtle, crane, house, postman, library, forest, apartment, path 목록으로 입력해 주세요.",
+      );
+    if (
       !Array.isArray(q.options) ||
       q.options.length < 2 ||
       q.options.length > 3 ||
@@ -906,7 +962,7 @@ function validateContent(c) {
 function teacher() {
   const root = open(
     "교사용 수업 자료 편집",
-    `<span class="badge">로컬 편집 메뉴 · 계정 권한 보호 기능 아님</span><p class="small">예시 회의·안건 연결·주민의 상태별 대사·퀴즈·출처·분류 기준·미션 목표를 JSON으로 수정해요. 학생 화면에는 <b>검토 완료</b> 자료만 보여요. 원문을 확인한 뒤 문장을 작성하고 checkedAt에 확인일을 적어 주세요. ID는 진행 기록과 연결되므로 유지해 주세요.</p><label>편집할 자료<select id="section">${[
+    `<span class="badge">로컬 편집 메뉴 · 계정 권한 보호 기능 아님</span><p class="small">예시 회의·안건 연결·주민의 상태별 대사·퀴즈·출처·분류 기준·미션 목표를 JSON으로 수정해요. 학생 화면에는 <b>검토 완료</b> 자료만 보여요. 원문을 확인한 뒤 문장을 작성하고 checkedAt에 확인일을 적어 주세요. ID는 진행 기록과 연결되므로 유지해 주세요. 퀴즈 contexts에서 대상을 지정해요: otter(수달), turtle(남생이), crane(학), house(주택가), postman(우체부), library(도서관), forest(숲길), apartment(아파트), path(안내 길). 빈 목록이면 주민 퀴즈에 표시하지 않아요.</p><label>편집할 자료<select id="section">${[
       ["meeting", "학급 회의 결과"],
       ["dialogues", "주민 대사"],
       ["quizzes", "퀴즈"],
@@ -957,6 +1013,7 @@ function teacher() {
     section.dataset.previous = section.value;
   };
   function apply(c) {
+    c = upgradeQuizContent(c);
     validateContent(c);
     if (!saveContent(c)) return;
     content = c;
@@ -1046,6 +1103,7 @@ function settings() {
       )
         throw new Error("개인 기록 백업 파일을 선택해 주세요.");
       validateState(b.state);
+      b.content = upgradeQuizContent(b.content);
       validateContent(b.content);
       const incoming = await decodeBundle(b.art);
       const r = open(
@@ -1171,8 +1229,7 @@ function interact(id) {
     case "house":
       return talk("resident");
     case "apartment":
-      toast("여러 가족이 함께 사는 공간이에요. 공동 시설과 길을 배려해요.");
-      return;
+      return placeStory("apartment");
     case "path":
       return pathPuzzle();
     case "bins":
@@ -1182,7 +1239,7 @@ function interact(id) {
     case "eco-map":
       return showMap();
     case "forest":
-      return books();
+      return placeStory("forest");
     case "rest":
     case "manager":
     case "specimen":
