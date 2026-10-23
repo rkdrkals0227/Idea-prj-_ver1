@@ -1,0 +1,727 @@
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import manifest from "./data/asset-manifest.json";
+import { habitats } from "./data/content.js";
+const C = {
+  grass: 0xb9cf8a,
+  path: 0xe8d7ad,
+  cream: 0xfff3d6,
+  roof: 0xdb866b,
+  green: 0x5d9872,
+  water: 0x84c7cc,
+};
+const mats = new Map();
+function mat(c) {
+  if (!mats.has(c))
+    mats.set(c, new THREE.MeshStandardMaterial({ color: c, roughness: 0.95 }));
+  return mats.get(c);
+}
+const geo = {
+  box: new THREE.BoxGeometry(1, 1, 1),
+  sphere: new THREE.SphereGeometry(1, 16, 12),
+  cylinder: new THREE.CylinderGeometry(1, 1, 1, 16),
+  cone: new THREE.ConeGeometry(1, 1, 4),
+};
+function shape(type, color, size, pos, parent) {
+  const m = new THREE.Mesh(geo[type], mat(color));
+  m.scale.set(...size);
+  m.position.set(...pos);
+  m.castShadow = true;
+  m.receiveShadow = true;
+  parent.add(m);
+  return m;
+}
+function label(text, color = "#315747") {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 96;
+  const c = canvas.getContext("2d");
+  c.fillStyle = "#fffbee";
+  c.beginPath();
+  c.roundRect(5, 5, 502, 82, 30);
+  c.fill();
+  c.font = "bold 29px sans-serif";
+  c.textAlign = "center";
+  c.fillStyle = color;
+  c.fillText(text, 256, 57);
+  const t = new THREE.CanvasTexture(canvas);
+  const s = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: t, depthTest: false }),
+  );
+  s.scale.set(4.5, 0.84, 1);
+  s.userData.ownedTexture = true;
+  return s;
+}
+export class World {
+  constructor(host, { interact, near, warning, state, content }) {
+    this.callbacks = { interact, near, warning };
+    this.state = state;
+    this.content = content;
+    this.keys = new Set();
+    this.entities = [];
+    this.colliders = [];
+    this.mixers = [];
+    this.models = {};
+    this.art = [];
+    this.artToken = 0;
+    this.indoor = null;
+    this.moveEnabled = true;
+    this.clock = new THREE.Clock();
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color("#d6e8d9");
+    this.scene.fog = new THREE.Fog("#d6e8d9", 52, 105);
+    this.camera = new THREE.PerspectiveCamera(40, 1, 0.1, 180);
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.7));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    host.append(this.renderer.domElement);
+    this.canvas = this.renderer.domElement;
+    this.canvas.setAttribute("aria-label", "금산마을 3D 탐험 화면");
+    this.canvas.tabIndex = 0;
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x788d5d, 1.8));
+    const sun = new THREE.DirectionalLight(0xfff5d9, 1.8);
+    sun.position.set(-15, 32, 20);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    Object.assign(sun.shadow.camera, {
+      left: -40,
+      right: 40,
+      top: 40,
+      bottom: -40,
+      far: 100,
+    });
+    sun.shadow.bias = -0.001;
+    this.scene.add(sun);
+    this.outdoor = new THREE.Group();
+    this.scene.add(this.outdoor);
+    this.createVillage();
+    this.player = this.animal("player");
+    this.player.position.set(-10, 0, 1);
+    this.scene.add(this.player);
+    this.loadRole("player", this.player);
+    this.camera.position.set(5, 23, 27);
+    this.camera.lookAt(this.player.position);
+    this.ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.65, 0.78, 32),
+      new THREE.MeshBasicMaterial({ color: 0xfff3b3, side: THREE.DoubleSide }),
+    );
+    this.ring.rotation.x = -Math.PI / 2;
+    this.ring.position.y = 0.06;
+    this.scene.add(this.ring);
+    window.addEventListener("resize", () => this.resize(host));
+    this.resize(host);
+    window.addEventListener("keydown", (e) => {
+      if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || !this.moveEnabled)
+        return;
+      if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)
+      )
+        e.preventDefault();
+      this.keys.add(e.key.toLowerCase());
+      if (e.key.toLowerCase() === "e" && !e.repeat && this.nearest)
+        this.callbacks.interact(this.nearest.id);
+    });
+    window.addEventListener("keyup", (e) =>
+      this.keys.delete(e.key.toLowerCase()),
+    );
+    window.addEventListener("blur", () => this.keys.clear());
+    const ray = new THREE.Raycaster();
+    this.canvas.addEventListener("pointerdown", (e) => {
+      if (!this.moveEnabled) return;
+      const r = this.canvas.getBoundingClientRect();
+      ray.setFromCamera(
+        new THREE.Vector2(
+          ((e.clientX - r.left) / r.width) * 2 - 1,
+          (-(e.clientY - r.top) / r.height) * 2 + 1,
+        ),
+        this.camera,
+      );
+      const hits = ray.intersectObjects(
+        this.art.map((a) => a.sprite),
+        false,
+      );
+      if (hits[0])
+        this.callbacks.interact("art:" + hits[0].object.userData.artId);
+    });
+    this.animate();
+  }
+  resize(host) {
+    const w = host.clientWidth,
+      h = host.clientHeight;
+    this.renderer.setSize(w, h);
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+  }
+  block(x, z, w, d) {
+    this.colliders.push({ x, z, w, d });
+  }
+  entity(id, title, x, z, object = null) {
+    const obj = object || new THREE.Group();
+    if (!object) this.outdoor.add(obj);
+    obj.position.set(x, 0, z);
+    const tag = label(title);
+    tag.position.y = 3.4;
+    obj.add(tag);
+    this.entities.push({ id, title, x, z, obj, tag });
+    return obj;
+  }
+  building(id, title, color) {
+    const cfg = manifest[id],
+      g = new THREE.Group(),
+      [x, , z] = cfg.position,
+      [w, d] = cfg.collision;
+    this.outdoor.add(g);
+    g.position.set(x, 0, z);
+    const h = id === "apartment" ? 6 : 3.2;
+    shape("box", C.cream, [w, h, d], [0, h / 2, 0], g);
+    if (id !== "apartment") {
+      const roof = shape(
+        "cone",
+        color,
+        [w * 0.85, 2, d * 0.85],
+        [0, h + 0.8, 0],
+        g,
+      );
+      roof.rotation.y = Math.PI / 4;
+    } else shape("box", color, [w + 0.2, 0.3, d + 0.2], [0, h, 0], g);
+    for (let i = -1; i <= 1; i++) {
+      shape(
+        "box",
+        0x80a9aa,
+        [0.95, 1, 0.08],
+        [i * w * 0.27, 2, d / 2 + 0.04],
+        g,
+      );
+      if (h > 4)
+        shape(
+          "box",
+          0x80a9aa,
+          [0.95, 1, 0.08],
+          [i * w * 0.27, 4.4, d / 2 + 0.04],
+          g,
+        );
+    }
+    shape("box", 0x805d48, [1.2, 1.9, 0.12], [0, 0.95, d / 2 + 0.08], g);
+    shape("box", 0xf5e9cb, [2, 0.18, 1], [0, 0.09, d / 2 + 0.45], g);
+    this.block(x, z, w, d);
+    const tag = label(title);
+    tag.position.set(0, h + 2, 0);
+    g.add(tag);
+    this.entity(
+      id,
+      id === "school" || id === "library" ? title + " · 들어가기" : title,
+      x,
+      z + d / 2 + 1.5,
+    );
+    this.loadRole(id, g);
+    return g;
+  }
+  animal(id) {
+    const g = new THREE.Group(),
+      isTurtle = id === "turtle",
+      isCrane = id === "crane",
+      isPlayer = id === "player";
+    const color = isPlayer
+      ? 0xe9ba84
+      : isTurtle
+        ? 0x83a879
+        : isCrane
+          ? 0xeee9d4
+          : 0xb99476;
+    shape("sphere", color, [0.48, 0.63, 0.4], [0, 0.8, 0], g);
+    shape("sphere", color, [0.48, 0.45, 0.43], [0, 1.5, 0], g);
+    if (isTurtle)
+      shape("sphere", 0x66845c, [0.53, 0.6, 0.28], [0, 0.85, -0.22], g);
+    if (isPlayer) {
+      shape("sphere", 0x4d7157, [0.52, 0.2, 0.48], [0, 1.87, 0], g);
+      shape("box", 0x719e8e, [0.7, 0.6, 0.45], [0, 0.8, 0], g);
+      shape("box", 0xdb997b, [0.5, 0.6, 0.3], [0, 0.86, -0.4], g);
+    } else if (!isTurtle && !isCrane) {
+      for (const x of [-0.35, 0.35])
+        shape("sphere", color, [0.17, 0.2, 0.14], [x, 1.82, 0], g);
+    }
+    for (const x of [-0.17, 0.17]) {
+      shape("sphere", 0x333f3b, [0.045, 0.065, 0.04], [x, 1.55, 0.4], g);
+      shape("sphere", 0xe2a69a, [0.09, 0.05, 0.04], [x * 1.6, 1.38, 0.36], g);
+      shape("sphere", 0x735c48, [0.16, 0.19, 0.25], [x, 0.18, 0.08], g);
+    }
+    shape(
+      isCrane ? "cone" : "sphere",
+      isCrane ? 0xd9a453 : 0xf2dac0,
+      isCrane ? [0.14, 0.5, 0.13] : [0.23, 0.15, 0.13],
+      [0, 1.33, 0.43],
+      g,
+    );
+    return g;
+  }
+  tree(x, z, s = 1) {
+    const g = new THREE.Group();
+    this.outdoor.add(g);
+    g.position.set(x, 0, z);
+    shape("cylinder", 0x9c7a54, [0.22, 1.9, 0.22], [0, 0.9, 0], g);
+    shape("sphere", 0x79a171, [1.35, 1.4, 1.25], [0, 2.4, 0], g);
+    shape("sphere", 0x92b47d, [1.1, 1.1, 1], [0.6, 2.8, 0.2], g);
+    g.scale.setScalar(s);
+    this.block(x, z, 1 * s, 1 * s);
+    if (manifest.tree.url) this.loadRole("tree", g);
+  }
+  createVillage() {
+    shape("box", C.grass, [66, 0.35, 56], [0, -0.2, 0], this.outdoor);
+    shape("box", C.path, [51, 0.04, 4], [1, 0.015, 3], this.outdoor);
+    shape("box", C.path, [4, 0.045, 33], [1, 0.018, -3], this.outdoor);
+    shape("box", C.path, [17, 0.04, 3], [18, 0.018, -10], this.outdoor);
+    shape("box", C.path, [3, 0.04, 11], [-10, 0.018, 0], this.outdoor);
+    for (let i = 0; i < 9; i++) {
+      shape(
+        "box",
+        0xf0db9b,
+        [0.85, 0.09, 0.85],
+        [-9 + i, 0.06, 3],
+        this.outdoor,
+      );
+      for (let j = 0; j < 3; j++)
+        shape(
+          "box",
+          0xc6a555,
+          [0.62, 0.02, 0.07],
+          [-9 + i, 0.115, 2.77 + j * 0.22],
+          this.outdoor,
+        );
+    }
+    this.pathPatch = shape(
+      "box",
+      C.path,
+      [2, 0.12, 1.1],
+      [-5, 0.1, 3],
+      this.outdoor,
+    );
+    this.pathObstacle = shape(
+      "box",
+      0xc58b61,
+      [0.8, 0.8, 0.8],
+      [-7, 0.4, 3],
+      this.outdoor,
+    );
+    this.building("school", this.content.schoolName, C.roof);
+    this.building("library", "작은 도서관", 0x7fa397);
+    this.building("apartment", "햇살 아파트", 0xb7a3bd);
+    this.building("house", "꽃담 주택", 0xdbb16e);
+    const pond = shape(
+      "cylinder",
+      C.water,
+      [8, 0.12, 6],
+      [24, -0.01, -18],
+      this.outdoor,
+    );
+    this.block(24, -18, 16, 12);
+    const shore = shape(
+      "cylinder",
+      0xd7c997,
+      [8.5, 0.06, 6.5],
+      [24, -0.09, -18],
+      this.outdoor,
+    );
+    shore.receiveShadow = true;
+    for (let i = 0; i < 3; i++) {
+      const m = shape(
+        "cone",
+        0x91aa91,
+        [12 + i * 2, 13 + i * 2, 10],
+        [-20 + i * 20, 5, -31 - i * 2],
+        this.outdoor,
+      );
+      m.rotation.y = 0.6;
+    }
+    for (const [x, z, s] of [
+      [-22, -12, 1.2],
+      [-18, -16, 1],
+      [-25, 2, 1],
+      [-19, 9, 1],
+      [-16, 15, 1.1],
+      [-6, 17, 1.2],
+      [6, 15, 1],
+      [27, 9, 1],
+      [-24, -23, 1.4],
+      [8, -20, 1.2],
+      [12, -23, 1.1],
+      [29, -4, 1],
+    ])
+      this.tree(x, z, s);
+    for (let i = 0; i < 80; i++) {
+      const x = Math.sin(i * 39.7) * 29,
+        z = Math.cos(i * 17.2) * 24;
+      if (Math.abs(z - 3) < 3 || Math.abs(x - 1) < 3 || (x > 14 && z < -10))
+        continue;
+      shape(
+        "sphere",
+        i % 3 === 0 ? 0xf1bcb7 : i % 3 === 1 ? 0xffe7a0 : 0xebead4,
+        [0.13, 0.17, 0.13],
+        [x, 0.18, z],
+        this.outdoor,
+      );
+    }
+    for (const id of ["otter", "turtle", "crane", "postman"]) {
+      const g = this.animal(id),
+        p = manifest[id].position;
+      this.outdoor.add(g);
+      this.entity(id, this.content.dialogues[id].name, ...[p[0], p[2]], g);
+      this.loadRole(id, g);
+    }
+    const npc = this.animal("otter");
+    this.outdoor.add(npc);
+    this.entity("resident", "밤톨 · 주택가 주민", 16, 9, npc);
+    this.entity("path", "안내 길 · 살펴보기", -6, 4.7);
+    this.entity("bins", "분리수거함", 11, 10);
+    for (let i = 0; i < 3; i++)
+      shape(
+        "box",
+        [0x89a89c, 0xd2b578, 0x92a7b5][i],
+        [0.8, 1, 0.8],
+        [10 + i, 0.5, 11.4],
+        this.outdoor,
+      );
+    this.entity("mailbox", "마을 우체통", 4, 8);
+    shape("box", 0xb86853, [0.9, 1, 0.8], [4, 1.2, 8], this.outdoor);
+    shape("cylinder", 0x826f57, [0.12, 1, 0.12], [4, 0.5, 8], this.outdoor);
+    this.entity("eco-map", "우리 반 생태 지도", -3, 8);
+    shape("box", 0x75988a, [2, 1.3, 0.18], [-3, 1.4, 8], this.outdoor);
+    this.entity("forest", "월아산이 보이는 숲길", -19, -11);
+    this.entity("rest", "남생이 쉼터", 18, -14);
+    this.restTrash = shape(
+      "box",
+      0xe1ae7e,
+      [0.4, 0.3, 0.4],
+      [18, 0.15, -14],
+      this.outdoor,
+    );
+    this.entity("manager", "생태 안내원 · 연습 표본 인계", 14, -10);
+    const manager = this.animal("crane");
+    manager.position.set(14, 0, -10);
+    this.outdoor.add(manager);
+    this.specimen = shape(
+      "sphere",
+      0xb789a4,
+      [0.4, 0.2, 0.4],
+      [21, 0.25, -8],
+      this.outdoor,
+    );
+    this.entity("specimen", "전문가가 지정한 연습 표본", 21, -8);
+    for (const w of this.content.waste) {
+      const m = shape(
+        w.category === "금속" ? "cylinder" : "box",
+        w.category === "종이" ? 0xf5eee0 : 0xb8c6c7,
+        [0.3, 0.35, 0.3],
+        [w.x, 0.2, w.z],
+        this.outdoor,
+      );
+      const obj = this.entity("waste:" + w.id, w.name, w.x, w.z);
+      obj.add(m);
+      m.position.set(0, 0.25, 0);
+    }
+    this.sync(this.state);
+  }
+  async loadRole(id, group) {
+    const cfg = manifest[id];
+    if (!cfg?.url) return;
+    const loader = new GLTFLoader();
+    let dependencyFailed = false;
+    loader.manager.onError = () => {
+      dependencyFailed = true;
+    };
+    try {
+      const gltf = await loader.loadAsync(
+        import.meta.env.BASE_URL + cfg.url.replace(/^\//, ""),
+      );
+      if (dependencyFailed) throw new Error("외부 텍스처·버퍼 누락");
+      const model = gltf.scene;
+      const box = new THREE.Box3().setFromObject(model),
+        size = box.getSize(new THREE.Vector3()),
+        center = box.getCenter(new THREE.Vector3()),
+        max = Math.max(size.x, size.y, size.z);
+      if (!Number.isFinite(max) || max <= 0)
+        throw new Error("유효하지 않은 크기");
+      const scale = cfg.targetSize / max;
+      model.scale.multiplyScalar(scale);
+      model.position.set(
+        -center.x * scale,
+        -box.min.y * scale + (cfg.groundHeight || 0),
+        -center.z * scale,
+      );
+      const wrapper = new THREE.Group();
+      wrapper.rotation.y = cfg.rotation || 0;
+      wrapper.add(model);
+      for (const c of [...group.children]) if (!c.isSprite) c.visible = false;
+      group.add(wrapper);
+      model.traverse((o) => {
+        if (o.isMesh) {
+          o.castShadow = true;
+          o.receiveShadow = true;
+        }
+      });
+      if (gltf.animations.length) {
+        const mixer = new THREE.AnimationMixer(model);
+        const actions = {};
+        for (const [role, name] of Object.entries(cfg.animations || {})) {
+          const clip = THREE.AnimationClip.findByName(gltf.animations, name);
+          if (clip) actions[role] = mixer.clipAction(clip);
+        }
+        actions.idle?.play();
+        this.mixers.push(mixer);
+        this.models[id] = { actions };
+      }
+    } catch (e) {
+      this.callbacks.warning(
+        `${id} 모델을 불러오지 못해 임시 모형을 사용해요. 파일 경로와 외부 텍스처·버퍼를 확인해 주세요.`,
+      );
+    }
+  }
+  enter(id) {
+    this.keys.clear();
+    if (this.indoor) this.exit();
+    this.indoor = id;
+    this.outdoor.visible = false;
+    this.room = new THREE.Group();
+    this.scene.add(this.room);
+    shape("box", 0xe9d8b9, [16, 0.2, 14], [0, -0.1, 0], this.room);
+    shape("box", 0xe6e1c8, [16, 4, 0.3], [0, 2, -7], this.room);
+    shape("box", 0xe6e1c8, [0.3, 4, 14], [-8, 2, 0], this.room);
+    if (id === "school") {
+      shape("box", 0x588b75, [7, 2.6, 0.2], [0, 2, -6.7], this.room);
+      const t = label("우리 학급 회의 결과");
+      t.position.set(0, 3, -6.3);
+      this.room.add(t);
+    } else {
+      for (let i = -1; i <= 1; i++) {
+        shape("box", 0x9e7655, [3, 3, 0.7], [i * 4, 1.5, -6], this.room);
+        for (let j = 0; j < 9; j++)
+          shape(
+            "box",
+            [0xa1bda7, 0xe3b18b, 0xd3c69d][j % 3],
+            [0.22, 1, 0.4],
+            [i * 4 - 1 + j * 0.25, 1 + (j % 2), -5.5],
+            this.room,
+          );
+      }
+    }
+    this.player.position.set(0, 0, 3);
+    this.roomEntities = [
+      { id: "exit", title: "마을로 나가기", x: 0, z: 5.7 },
+      {
+        id: id === "school" ? "board" : "books",
+        title:
+          id === "school"
+            ? "회의 결과 · 활동 돌아보기"
+            : "책장 · 지역 자료와 도감",
+        x: 0,
+        z: -4,
+      },
+    ];
+    this.camera.position.set(10, 21, 27);
+  }
+  exit() {
+    if (!this.indoor) return;
+    const id = this.indoor;
+    this.scene.remove(this.room);
+    this.room.traverse((o) => {
+      if (o.userData.ownedTexture) o.material.map?.dispose();
+    });
+    const p = manifest[id].position;
+    this.player.position.set(p[0], 0, p[2] + manifest[id].collision[1] / 2 + 2);
+    this.indoor = null;
+    this.outdoor.visible = true;
+    this.keys.clear();
+  }
+  sync(s) {
+    this.state = s;
+    this.pathPatch.visible = !s.path;
+    this.pathObstacle.visible = !s.path;
+    this.restTrash.visible = !s.lake.rest;
+    this.specimen.visible = !s.lake.picked;
+    for (const e of this.entities) {
+      if (e.id.startsWith("waste:"))
+        e.obj.visible =
+          !s.collected.includes(e.id.slice(6)) &&
+          !s.sorted.includes(e.id.slice(6));
+      if (e.id === "specimen") e.obj.visible = !s.lake.picked;
+    }
+  }
+  blocked(x, z) {
+    if (this.indoor) return Math.abs(x) > 7 || z > 6 || z < -5.4;
+    return (
+      Math.abs(x) > 30 ||
+      Math.abs(z) > 25 ||
+      this.colliders.some(
+        (c) =>
+          Math.abs(x - c.x) < c.w / 2 + 0.38 &&
+          Math.abs(z - c.z) < c.d / 2 + 0.38,
+      )
+    );
+  }
+  setPaused(v) {
+    this.moveEnabled = !v;
+    this.keys.clear();
+  }
+  configure(settings) {
+    this.settings = settings;
+    this.renderer.setPixelRatio(
+      settings.quality === "low" ? 1 : Math.min(devicePixelRatio, 1.7),
+    );
+    this.renderer.shadowMap.enabled = settings.quality !== "low";
+  }
+  async setArt(works, settings) {
+    const token = ++this.artToken;
+    for (const a of this.art) {
+      this.outdoor.remove(a.group);
+      a.texture.dispose();
+      a.sprite.material.dispose();
+      a.tag.material.map.dispose();
+      a.tag.material.dispose();
+    }
+    this.art = [];
+    for (const a of works.slice(0, Math.min(30, settings.artLimit))) {
+      try {
+        const bitmap = await createImageBitmap(a.blob);
+        if (token !== this.artToken) {
+          bitmap.close();
+          return;
+        }
+        const texture = new THREE.CanvasTexture(bitmap);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const sprite = new THREE.Sprite(
+          new THREE.SpriteMaterial({
+            map: texture,
+            transparent: true,
+            alphaTest: 0.03,
+          }),
+        );
+        texture.addEventListener("dispose", () => bitmap.close());
+        sprite.scale.set(
+          (2 * bitmap.width) / Math.max(bitmap.width, bitmap.height),
+          (2 * bitmap.height) / Math.max(bitmap.width, bitmap.height),
+          1,
+        );
+        sprite.position.y = 1.2;
+        sprite.userData.artId = a.id;
+        const group = new THREE.Group();
+        group.add(sprite);
+        const tag = label(
+          settings.displayName === "alias" ? a.alias || a.name : a.name,
+        );
+        tag.position.y = 2.7;
+        tag.scale.multiplyScalar(0.55);
+        group.add(tag);
+        const h = habitats[a.habitat] || habitats.grass;
+        group.position.set(h.x, 0, h.z);
+        this.outdoor.add(group);
+        this.art.push({
+          data: a,
+          group,
+          sprite,
+          tag,
+          texture,
+          phase: this.art.length * 2.3,
+        });
+      } catch {
+        this.callbacks.warning(
+          "작품 이미지 한 장을 읽지 못했어요. 도감에서 삭제하거나 다시 등록해 주세요.",
+        );
+      }
+    }
+  }
+  handover() {
+    this.transfer?.mesh.removeFromParent();
+    const mesh = shape('box',0xc9ab78,[.55,.4,.45],[this.player.position.x,1.3,this.player.position.z],this.scene);
+    this.transfer={mesh,from:mesh.position.clone(),elapsed:0};
+  }
+  animate = () => {
+    requestAnimationFrame(this.animate);
+    const dt = Math.min(this.clock.getDelta(), 0.05),
+      t = this.clock.elapsedTime;
+    let dx = 0,
+      dz = 0;
+    if (this.moveEnabled) {
+      dx =
+        (this.keys.has("d") || this.keys.has("arrowright") ? 1 : 0) -
+        (this.keys.has("a") || this.keys.has("arrowleft") ? 1 : 0);
+      dz =
+        (this.keys.has("s") || this.keys.has("arrowdown") ? 1 : 0) -
+        (this.keys.has("w") || this.keys.has("arrowup") ? 1 : 0);
+    }
+    const length = Math.hypot(dx, dz);
+    if (length) {
+      dx /= length;
+      dz /= length;
+      const x = this.player.position.x + dx * dt * 5,
+        z = this.player.position.z + dz * dt * 5;
+      if (!this.blocked(x, this.player.position.z)) this.player.position.x = x;
+      if (!this.blocked(this.player.position.x, z)) this.player.position.z = z;
+      this.player.rotation.y = Math.atan2(dx, dz);
+    }
+    const reduced = this.settings?.motion;
+    this.player.position.y = length && !reduced ? Math.sin(t * 14) * 0.06 : 0;
+    const actions = this.models.player?.actions;
+    if (actions) {
+      if (length) {
+        actions.idle?.stop();
+        if (!actions.walk?.isRunning()) actions.walk?.play();
+      } else {
+        actions.walk?.stop();
+        if (!actions.idle?.isRunning()) actions.idle?.play();
+      }
+    }
+    for (const m of this.mixers) m.update(dt);
+    const p = this.player.position;
+    const target = new THREE.Vector3(p.x + 13, p.y + 21, p.z + 23);
+    this.camera.position.lerp(target, 1 - Math.exp(-dt * 5));
+    this.camera.lookAt(p.x, p.y, p.z - 1);
+    let near = null,
+      min = 3.2;
+    for (const e of this.indoor ? this.roomEntities : this.entities) {
+      if (e.obj && !e.obj.visible) continue;
+      const d = Math.hypot(e.x - p.x, e.z - p.z);
+      if (d < min) {
+        near = e;
+        min = d;
+      }
+    }
+    if (near?.id !== this.nearest?.id) {
+      this.nearest = near;
+      this.callbacks.near(near);
+    }
+    this.ring.visible = !!near;
+    if (near) this.ring.position.set(near.x, 0.07, near.z);
+    for (const a of this.art) {
+      const h = habitats[a.data.habitat] || habitats.grass,
+        move = a.data.kind === "animal" && !reduced;
+      const q = t * 0.22 + a.phase;
+      const step = Math.sin(q) * 0.5 + 0.5;
+      if (move && step > 0.16) {
+        a.group.position.x = h.x + Math.sin(q) * h.r;
+        a.group.position.z = h.z + Math.sin(q * 1.7) * h.r * 0.5;
+      }
+      a.sprite.position.y =
+        1.2 + (reduced ? 0 : Math.sin(t * 2 + a.phase) * 0.07);
+      a.sprite.material.rotation =
+        a.data.kind === "plant" && !reduced ? Math.sin(t + a.phase) * 0.04 : 0;
+      if (move) a.sprite.scale.x = Math.abs(a.sprite.scale.x) * (Math.cos(q) > 0 ? 1 : -1);
+    }
+    if(this.transfer){
+      const a=this.transfer; a.elapsed+=dt; const f=Math.min(a.elapsed/1.5,1);
+      a.mesh.position.lerpVectors(a.from,new THREE.Vector3(14,1.3,-10),f);
+      a.mesh.position.y+=Math.sin(f*Math.PI)*.8;
+      if(f===1){a.mesh.removeFromParent();this.transfer=null;}
+    }
+    if (this.delivery) {
+      const e = this.entities.find((e) => e.id === "postman");
+      e.obj.position.x = e.x + Math.sin(Math.min(this.delivery, Math.PI)) * 3;
+      this.delivery += dt * 1.5;
+      if (this.delivery > Math.PI) {
+        e.obj.position.x = e.x;
+        this.delivery = 0;
+      }
+    }
+    this.renderer.render(this.scene, this.camera);
+  };
+}

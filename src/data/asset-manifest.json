@@ -1,0 +1,84 @@
+{
+  "school": {
+    "url": null,
+    "position": [-10, 0, -5],
+    "targetSize": 7,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [7, 5],
+    "animations": { "idle": "Idle", "walk": "Walk" }
+  },
+  "library": {
+    "url": null,
+    "position": [1, 0, -10],
+    "targetSize": 6,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [6, 5]
+  },
+  "apartment": {
+    "url": null,
+    "position": [14, 0, -1],
+    "targetSize": 7,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [5, 5]
+  },
+  "house": {
+    "url": null,
+    "position": [20, 0, 8],
+    "targetSize": 5,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [5, 4]
+  },
+  "tree": {
+    "url": null,
+    "targetSize": 3.8,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [1, 1]
+  },
+  "otter": {
+    "url": null,
+    "position": [-4, 0, 1],
+    "targetSize": 1.8,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [1, 1],
+    "animations": { "idle": "Idle", "walk": "Walk" }
+  },
+  "turtle": {
+    "url": null,
+    "position": [19, 0, -11],
+    "targetSize": 1.5,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [1, 1]
+  },
+  "crane": {
+    "url": null,
+    "position": [4, 0, -6],
+    "targetSize": 2,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [1, 1]
+  },
+  "postman": {
+    "url": null,
+    "position": [3, 0, 6],
+    "targetSize": 1.8,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [1, 1]
+  },
+  "player": {
+    "url": null,
+    "position": [-10, 0, 1],
+    "targetSize": 1.7,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [0.7, 0.7],
+    "animations": { "idle": "Idle", "walk": "Walk" }
+  }
+}

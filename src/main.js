@@ -1,0 +1,1276 @@
+import "./style.css";
+import { World } from "./world.js";
+import { defaults, habitats } from "./data/content.js";
+import {
+  initialState,
+  startQuest,
+  collect,
+  sortWaste,
+  pathValid,
+  reconcile,
+  approved,
+  escapeHTML as h,
+  award,
+} from "./logic.js";
+import {
+  setStorageReporter,
+  loadState,
+  saveState,
+  loadContent,
+  saveContent,
+  artStore,
+  download,
+  exportWorks,
+  decodeBundle,
+} from "./storage.js";
+import { imageEditor } from "./editor.js";
+const $ = (s) => document.querySelector(s);
+let state,
+  content,
+  works = [],
+  world,
+  modal = null,
+  lastFocus = null,
+  toastTimer;
+let tracked = null;
+let criticalUntil = 0;
+const app = $("#app");
+app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day">맑은 낮 · 개인 체험</span></div></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">TODAY'S ADVENTURE</span><h2>마을에 작은 변화를 🌱</h2><div id="quests"></div><div class="counter"><span>함께 쌓은 활동 배지</span><b id="badge-count">0 / 3</b></div><div class="progress"><i id="progress"></i></div></section><nav class="sidebar" aria-label="탐험 도구"><button class="nav-btn" data-page="map"><span>⌘</span>마을 지도</button><button class="nav-btn" id="camera"><span>▣</span>그림 등록</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="catalog"><span>▤</span>생태 도감</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="마을 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
+function toast(message, critical = false) {
+  if (!critical && Date.now() < criticalUntil) return;
+  if (critical) criticalUntil = Date.now() + 8000;
+  clearTimeout(toastTimer);
+  $("#toast").textContent = message;
+  $("#toast").hidden = false;
+  toastTimer = setTimeout(() => ($("#toast").hidden = true), 6500);
+}
+function close() {
+  if (!modal) return;
+  modal.remove();
+  modal = null;
+  world?.setPaused(false);
+  lastFocus?.focus();
+}
+function open(title, html, width = "") {
+  if (!modal) lastFocus = document.activeElement;
+  modal?.remove();
+  modal = document.createElement("div");
+  modal.className = "overlay";
+  modal.innerHTML = `<section class="modal ${width}" role="dialog" aria-modal="true" aria-label="${h(title)}"><header class="modal-header"><h2>${h(title)}</h2><button class="close" aria-label="창 닫기">×</button></header><div class="modal-body">${html}</div></section>`;
+  document.body.append(modal);
+  world?.setPaused(true);
+  modal.querySelector(".close").onclick = close;
+  modal.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+    }
+    if (e.key === "Tab") {
+      const els = [
+          ...modal.querySelectorAll("button,input,select,textarea,a[href]"),
+        ].filter((el) => !el.disabled && !el.hidden),
+        first = els[0],
+        last = els.at(-1);
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  });
+  modal.querySelector(".close").focus();
+  return modal.querySelector(".modal-body");
+}
+const ui = { open, close, toast };
+setStorageReporter(message => toast(message, true));
+state = loadState();
+content = loadContent(defaults);
+try { validateState(state); validateContent(content); } catch {
+ state = initialState(); content = structuredClone(defaults);
+ toast("저장 자료 형식을 읽지 못했어요. 원본은 자동으로 지우지 않았어요. 백업 파일을 확인하거나 다른 브라우저에서 열어 주세요.", true);
+}
+function persist() {
+  reconcile(state, content);
+  saveState(state);
+  world?.sync(state);
+  renderHud();
+}
+function renderHud() {
+  const ids = Object.keys(content.quests);
+  $("#quests").innerHTML = ids
+    .map(
+      (id) =>
+        `<div class="quest-row ${state.completed.includes(id) ? "done" : ""}" role="button" tabindex="0" data-quest="${h(id)}"><span class="status-dot">${state.completed.includes(id) ? "✓" : "○"}</span><div>${h(content.quests[id].title)}<div class="summary-count">${state.completed.includes(id) ? "완료했어요" : state.started.includes(id) ? "진행 중" : "학교에서 시작해요"}</div></div></div>`,
+    )
+    .join("");
+  $("#badge-count").textContent =
+    `${ids.filter((id) => state.completed.includes(id)).length} / ${ids.length}`;
+  $("#progress").style.width =
+    `${(ids.filter((id) => state.completed.includes(id)).length / ids.length) * 100}%`;
+  document.querySelectorAll("[data-quest]").forEach((b) => {
+    b.onclick = () => questInfo(b.dataset.quest);
+    b.onkeydown = (e) => {
+      if (e.key === "Enter") b.click();
+    };
+  });
+}
+function start(id) {
+  startQuest(state, id);
+  persist();
+  toast("활동을 시작했어요. 지도에서 위치를 찾아보세요.");
+}
+const targets = { path: [-6, 4.7], trash: [16, 9], lake: [19, -11] };
+function questInfo(id) {
+  const q = content.quests[id];
+  const root = open(
+    q.title,
+    `<span class="badge">${state.completed.includes(id) ? "완료" : state.started.includes(id) ? "진행 중" : "시작 가능"}</span><p>${h(q.description)}</p><p class="small">관련 회의 안건: ${h(content.agendas.find((a) => a.id === q.agenda)?.title || "자유 활동")}<br>목표 수량: ${h(q.target)} · 보상: ${h(q.reward)}</p><div class="actions"><button id="track">지도에서 위치 보기</button><button id="begin" class="primary">${state.started.includes(id) ? "계속 활동하기" : "이 활동 해 보기"}</button></div>`,
+  );
+  root.querySelector("#track").onclick = () => {
+    tracked = id;
+    showMap();
+  };
+  root.querySelector("#begin").onclick = () => {
+    start(id);
+    close();
+  };
+}
+function board() {
+  const root = open(
+    "우리 학급 회의 결과",
+    `<span class="badge">예시 회의 결과</span><h3>${h(content.className)} · ${h(content.topic)}</h3><p class="small">회의 날짜: ${h(content.meetingDate)}<br>역할 분담: ${h(content.meeting.roles)}<br>함께 지킬 약속: ${h(content.meeting.promise)}<br>활동 기간: ${h(content.meeting.period)}</p><div class="stack">${content.agendas.map((a, i) => `<button data-agenda="${i}">${h(a.title)} <span aria-hidden="true">↗</span></button>`).join("")}</div><div class="actions"><button id="reflect">활동 돌아보기</button><button id="teacher">교사용 편집</button></div>`,
+  );
+  root.querySelectorAll("[data-agenda]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const a = content.agendas[+b.dataset.agenda];
+        const r = open(
+          a.title,
+          `<h3>우리가 발견한 문제</h3><p>${h(a.problem)}</p><h3>함께 정한 실천</h3><p>${h(a.action)}</p><div class="actions"><button id="map">지도 위치</button><button class="primary" id="go">이 활동 해 보기</button></div>`,
+        );
+        r.querySelector("#map").onclick = () => {
+          tracked = a.quest;
+          showMap();
+        };
+        r.querySelector("#go").onclick = () => {
+          start(a.quest);
+          close();
+        };
+      }),
+  );
+  root.querySelector("#reflect").onclick = reflection;
+  root.querySelector("#teacher").onclick = teacher;
+}
+function reflection() {
+  const root = open(
+    "오늘의 탐험을 돌아봐요",
+    `<p>읽은 자료 ${state.read.length}개 · 활동 배지 ${state.badges.length}개</p><form id="reflection"><label>어떤 문제가 있었나요?<textarea name="problem" required maxlength="500"></textarea></label><label>어떻게 해결했나요?<textarea name="solution" required maxlength="500"></textarea></label><label>생활에서 할 수 있는 일은 무엇인가요?<textarea name="practice" required maxlength="500"></textarea></label><button class="primary">배움 기록 남기기</button></form><div class="stack" id="records">${state.reflections.map((r) => `<article class="card"><h3>${h(r.date)}</h3><p>${h(r.problem)}<br>${h(r.solution)}<br>${h(r.practice)}</p></article>`).join("")}</div>`,
+  );
+  root.querySelector("form").onsubmit = (e) => {
+    e.preventDefault();
+    state.reflections.push({
+      ...Object.fromEntries(new FormData(e.target)),
+      date: new Date().toLocaleDateString("ko-KR"),
+    });
+    persist();
+    toast("배움 기록을 남겼어요.");
+    reflection();
+  };
+}
+function talk(id) {
+  const key = id === "resident" ? "house" : id,
+    d = content.dialogues[key],
+    qid = { otter: "path", turtle: "lake", house: "trash" }[key],
+    stage = qid
+      ? state.completed.includes(qid)
+        ? "after"
+        : state.started.includes(qid)
+          ? "during"
+          : "before"
+      : "before";
+  const root = open(
+    d.name,
+    `<p class="eyebrow">VILLAGE FRIENDS · 가상의 동물 주민</p><div class="card"><p>${h(d[stage])}</p></div><div class="stack actions"><button id="story">우리 지역 이야기</button><button id="quiz">퀴즈 풀기</button><button id="help">${qid ? "도와줄 일이 있나요?" : key === "postman" ? "편지 쓰기" : "도서관 책장 보기"}</button><button id="bye">다음에 이야기해요</button></div>`,
+  );
+  root.querySelector("#story").onclick = () => {
+    const r = open(
+      d.name,
+      `<p>${h(d.story)}</p><p class="notice">주민은 가상 인물이에요. 실제 서식 기록은 출처를 확인한 별도 자료로 살펴봐요.</p><button id="books">지역 자료 보기</button>`,
+    );
+    r.querySelector("#books").onclick = books;
+  };
+  root.querySelector("#quiz").onclick = () =>
+    quiz(key === "turtle" ? "q-wild" : key === "otter" ? "q-path" : "q-legend");
+  root.querySelector("#help").onclick = () =>
+    qid ? questInfo(qid) : key === "postman" ? letter() : books();
+  root.querySelector("#bye").onclick = close;
+}
+function quiz(id) {
+  const list = approved(content.quizzes);
+  const q = list.find((q) => q.id === id) || list[0];
+  if (!q) {
+    toast("교사가 검토한 퀴즈가 아직 없어요.");
+    return;
+  }
+  const root = open(
+    "생각이 자라는 퀴즈",
+    `<span class="badge">${h(q.kind || "사실 퀴즈")} · ${h(q.difficulty)}</span><h3>${h(q.question)}</h3><div class="stack">${q.options.map((o, i) => `<button data-answer="${i}">${i + 1}. ${h(o)}</button>`).join("")}</div><div id="answer" aria-live="polite"></div><p class="small">관련 장소: ${h(q.place)}<br>출처: ${h(q.sourceTitle)} · ${h(q.sourceYear || "연도 미상")}<br>확인일: ${h(q.checkedAt || "미상")}</p>${q.sourceUrl ? `<a href="${h(safeUrl(q.sourceUrl))}" target="_blank" rel="noopener noreferrer">출처 확인 ↗</a>` : ""}`,
+  );
+  root.querySelectorAll("[data-answer]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const correct = +b.dataset.answer === q.answer;
+        const a = root.querySelector("#answer");
+        a.className = "feedback";
+        a.textContent = correct
+          ? `✓ 맞았어요! ${q.explanation}`
+          : `다시 생각해 볼까요? ${q.explanation}`;
+        if (correct) {
+          if (!state.quiz.includes(q.id)) state.quiz.push(q.id);
+          if (!state.badges.includes("생각 새싹"))
+            state.badges.push("생각 새싹");
+          persist();
+          root
+            .querySelectorAll("[data-answer]")
+            .forEach((x) => (x.disabled = true));
+          const next = document.createElement("button");
+          next.textContent = "다른 퀴즈 풀기";
+          next.onclick = () =>
+            quiz(list[(list.indexOf(q) + 1) % list.length].id);
+          a.append(document.createElement("br"), next);
+        }
+      }),
+  );
+}
+function safeUrl(url) {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" ? u.href : "#";
+  } catch {
+    return "#";
+  }
+}
+function books() {
+  const cards = approved(content.sources);
+  const root = open(
+    "작은 도서관 · 책장",
+    `<p class="eyebrow">한 장씩 읽고, 우리 마을을 알아가요</p><div class="cards">${[
+      { title: "진주 이야기", id: "festival" },
+      { title: "금산면 이야기", id: "geumsan" },
+      { title: "금호지 생태", id: "survey" },
+      { title: "월아산과 전설", id: "mountain" },
+      { title: "금호지 이야기", id: "lake" },
+    ]
+      .map(
+        (b) =>
+          `<article class="card"><h3>▤ ${b.title}</h3><p>${cards.some((c) => c.id === b.id) ? "확인된 자료를 읽어 봐요." : "교사가 출처를 확인하고 준비하는 책이에요."}</p><button data-book="${b.id}" ${cards.some((c) => c.id === b.id) ? "" : "disabled"}>책 펼치기</button></article>`,
+      )
+      .join(
+        "",
+      )}<article class="card"><h3>♧ 우리 반 생태 도감</h3><p>학생이 직접 관찰하고 만든 작품을 만나요.</p><button id="catalog">도감 펼치기</button></article><article class="card"><h3>함께 쓰는 마을</h3><p>주민을 배려하는 행동을 생각해요.</p><button id="quiz">생활 퀴즈 풀기</button></article></div><p class="small">지역 원문에 접근할 수 없어 초기 지역 자료는 검토 초안이에요. 확인되지 않은 내용은 학생용 사실 카드로 표시하지 않아요.</p>`,
+    "wide",
+  );
+  root.querySelectorAll("[data-book]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const c = cards.find((c) => c.id === b.dataset.book);
+        const r = open(
+          c.sourceTitle,
+          `<span class="badge">${h(c.kind)} · ${h(c.reviewStatus)}</span><p>${h(c.text)}</p><p class="small">자료 연도: ${h(c.sourceYear || "미상")} · 확인일: ${h(c.checkedAt)}</p><a href="${h(safeUrl(c.sourceUrl))}" target="_blank" rel="noopener noreferrer">출처 확인 ↗</a><div class="actions"><button id="read">읽었어요</button><button id="quiz">관련 퀴즈</button></div>`,
+        );
+        r.querySelector("#read").onclick = () => {
+          if (!state.read.includes(c.id)) state.read.push(c.id);
+          persist();
+          toast("읽은 자료로 기록했어요. 학교에서 돌아볼 수 있어요.");
+        };
+        r.querySelector("#quiz").onclick = () =>
+          quiz(
+            content.quizzes.find(
+              (q) =>
+                q.sourceUrl === c.sourceUrl && q.reviewStatus === "검토 완료",
+            )?.id,
+          );
+      }),
+  );
+  root.querySelector("#catalog").onclick = catalog;
+  root.querySelector("#quiz").onclick = () => quiz("q-path");
+}
+function pathPuzzle() {
+  if (state.path) {
+    toast("안내 길을 완성했어요! 길을 막지 않는 약속을 기억해요.");
+    return;
+  }
+  if (!state.started.includes("path")) start("path");
+  let blocked = true,
+    tiles = content.tactile.solution.map((t, i) => ({
+      type: i === 1 ? "empty" : t.type,
+      rotation: i === 2 ? 90 : t.rotation,
+    }));
+  const root = open(
+    "모두를 위한 안내 길",
+    `<p>${h(content.tactile.text)}</p><p class="notice">게임 속 주민과 함께하는 체험이에요. 실제 길은 어른과 담당 기관에 알려요.</p><button id="obstacle">상자 옮겨 통행로 비우기</button><p class="small">각 칸의 모양과 방향을 골라요. 직선 길의 선형 블록은 가로로 이어져야 해요.<br>점형: ● · 선형: ━ · 세로 방향: ┃</p><div id="tiles" class="tiles"></div><button id="check" class="primary">경로가 이어졌는지 확인</button><div id="path-feedback" aria-live="polite"></div>`,
+  );
+  function draw() {
+    root.querySelector("#tiles").innerHTML = tiles
+      .map(
+        (t, i) =>
+          `<div class="tile"><span class="glyph">${t.type === "empty" ? "?" : t.type === "dot" ? "⠿" : t.rotation % 180 === 0 ? "☰" : "Ⅲ"}</span><label class="small">${i + 1}번 칸<select data-type="${i}"><option value="empty" ${t.type === "empty" ? "selected" : ""}>빈칸</option><option value="dot" ${t.type === "dot" ? "selected" : ""}>점형</option><option value="line" ${t.type === "line" ? "selected" : ""}>선형</option></select></label><button data-rotate="${i}" style="font-size:.65rem;padding:5px">${t.rotation % 180 === 0 ? "가로 ↻" : "세로 ↻"}</button></div>`,
+      )
+      .join("");
+    root.querySelectorAll("[data-type]").forEach(
+      (s) =>
+        (s.onchange = () => {
+          tiles[+s.dataset.type].type = s.value;
+          draw();
+        }),
+    );
+    root.querySelectorAll("[data-rotate]").forEach(
+      (b) =>
+        (b.onclick = () => {
+          tiles[+b.dataset.rotate].rotation += 90;
+          draw();
+        }),
+    );
+  }
+  draw();
+  root.querySelector("#obstacle").onclick = (e) => {
+    blocked = false;
+    e.target.textContent = "✓ 통행로를 비웠어요";
+    e.target.disabled = true;
+  };
+  root.querySelector("#check").onclick = () => {
+    if (pathValid(tiles, content.tactile.solution, blocked)) {
+      state.path = true;
+      persist();
+      toast("안내 길이 이어졌어요! 물결의 감사 인사를 들어 보세요.");
+      close();
+    } else {
+      root.querySelector("#path-feedback").className = "feedback";
+      root.querySelector("#path-feedback").textContent = blocked
+        ? "먼저 길 위의 상자를 옮겨 주세요."
+        : "아직 끊긴 부분이나 다른 방향이 있어요. 칸의 모양과 방향을 다시 확인해 주세요.";
+    }
+  };
+}
+function pickup(id) {
+  const item = content.waste.find((w) => w.id === id);
+  if (!item) return;
+  if (collect(state, id)) {
+    startQuest(state, item.zone === "lake" ? "lake" : "trash");
+    persist();
+    toast(`${item.name}을 가방에 담았어요. 수거함에서 알맞게 분류해 주세요.`);
+  } else toast("이미 가방에 담거나 분류한 물건이에요.");
+}
+function bag() {
+  const items = state.collected
+    .map((id) => content.waste.find((w) => w.id === id))
+    .filter(Boolean);
+  const root = open(
+    "내 가방",
+    `<h3>주운 쓰레기 ${items.length}개</h3>${items.length ? "<p>마을 수거함에 가까이 가서 분류해요.</p>" : "<p>지금은 가방이 비어 있어요. 길가의 쓰레기를 찾아볼까요?</p>"}<div class="cards">${items.map((i) => `<article class="card">${h(i.name)}</article>`).join("")}</div><h3 style="margin-top:24px">마음을 담은 활동 배지</h3>${state.badges.map((b) => `<span class="badge">✧ ${h(b)}</span>`).join("") || '<p class="small">함께 활동하면 배지가 생겨요.</p>'}<p class="small">이미 분류한 물건: ${state.sorted.length}개 · 접수한 편지: ${state.letters.length}개</p><button id="letters">편지 이어 쓰기</button>`,
+  );
+  root.querySelector("#letters").onclick = letter;
+}
+function bins() {
+  const items = state.collected
+      .map((id) => content.waste.find((w) => w.id === id))
+      .filter(Boolean),
+    categories = [...new Set(content.waste.map((w) => w.category))];
+  const root = open(
+    "알맞은 수거함에 넣어요",
+    `<p class="small">수업용 예시 기준이에요. 실제 배출 방법은 우리 지역 안내를 확인해요.</p>${items.length ? `<div class="cards">${items.map((i) => `<article class="card"><h3>${h(i.name)}</h3><div class="stack">${categories.map((c) => `<button data-sort="${h(i.id)}" data-category="${h(c)}">${h(c)} 수거함</button>`).join("")}</div><div class="result" aria-live="polite"></div></article>`).join("")}</div>` : "<p>가방이 비어 있어요. 먼저 쓰레기 가까이에서 E키로 주워 주세요.</p>"}`,
+  );
+  root.querySelectorAll("[data-sort]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const item = content.waste.find((w) => w.id === b.dataset.sort);
+        if (sortWaste(state, item, b.dataset.category)) {
+          persist();
+          toast(`${item.name}을 알맞게 분류했어요!`);
+          bins();
+        } else {
+          b.closest(".card").querySelector(".result").textContent =
+            `다시 살펴볼까요? ${item.name}의 재질은 ${item.category}이에요.`;
+        }
+      }),
+  );
+}
+function lakeAction(id) {
+  startQuest(state, "lake");
+  if (id === "rest") {
+    if (!state.lake.rest) {
+      state.lake.rest = true;
+      persist();
+      toast("쉼터의 작은 종이 조각을 정리했어요. 남생이는 그대로 쉬게 두어요.");
+    } else toast("쉼터가 깨끗해요. 거리를 두고 관찰해요.");
+    return;
+  }
+  if (id === "specimen") {
+    if (!state.lake.identify) {
+      toast("먼저 생태 안내원에게 관리 체험 설명을 들어 주세요.");
+      return;
+    }
+    if (state.lake.picked) {
+      toast("이미 인계했거나 가방에 담은 연습 표본이에요.");
+      return;
+    }
+    state.lake.picked = true;
+    persist();
+    toast("연습 표본을 안전 상자에 담았어요. 생태 안내원에게 인계해 주세요.");
+    return;
+  }
+  const root = open(
+    "전문가와 함께하는 생태 돌봄",
+    `<p>모든 외래생물이 제거 대상은 아니에요. 관리 대상과 방법은 전문가가 관찰 근거를 확인하고 정해요.</p><p class="notice">이 체험에서는 실제 종을 수거하지 않아요. 보라색 모형은 안내원이 지정한 <b>연습 표본</b>이에요. 실제 남생이를 잡거나 옮기는 데 보상을 주지 않아요.</p><h3>우리가 할 수 있는 좋은 행동은?</h3><div class="stack"><button id="protect">거리를 두고 관찰·기록하고 어른에게 알리기</button><button id="wrong">보이는 생물을 모두 잡아서 옮기기</button><button id="handover" ${state.lake.picked && !state.lake.handed ? "" : "disabled"}>담아 온 연습 표본 인계하기</button></div><div id="lake-result" aria-live="polite"></div><p class="small">완료 조건: 호숫가 쓰레기 2개 분류 · 쉼터 정리 · 행동 구별 · 연습 표본 인계</p>`,
+  );
+  root.querySelector("#wrong").onclick = () => {
+    root.querySelector("#lake-result").textContent =
+      "생물을 함부로 잡거나 옮기면 서식지를 해칠 수 있어요. 다시 골라 봐요.";
+  };
+  root.querySelector("#protect").onclick = () => {
+    state.lake.identify = true;
+    persist();
+    root.querySelector("#lake-result").textContent =
+      "✓ 맞아요! 실제 생물은 관찰해요. 이제 안내원이 지정한 보라색 연습 표본만 담아 와 주세요.";
+  };
+  root.querySelector("#handover").onclick = () => {
+    state.lake.handed = true;
+    persist();
+    root.querySelector("#lake-result").innerHTML =
+      '<p class="feedback">▣ → ♧ 안내원이 안전 상자를 받았어요. 전문가에게 인계 완료!</p>';
+    root.querySelector("#handover").disabled = true;
+    world.handover();
+  };
+}
+function letterText(d) {
+  return `${d.recipient || "주민"}에게\n\n[${d.type || "문제 해결 제안"}]\n발견한 문제와 장소: ${d.problem || ""}\n주민이 겪는 어려움: ${d.difficulty || ""}\n내가 제안하는 해결 방법: ${d.proposal || ""}\n함께 실천할 약속: ${d.promise || ""}\n\n${d.free || ""}\n\n보내는 사람: ${d.alias || "탐험가"}\n\n※ 게임 속 편지입니다. 실제 기관 발송 전 교사 확인이 필요한 초안입니다.`;
+}
+function letter() {
+  const d = state.letterDraft;
+  const root = open(
+    "솔솔 우체국 · 마음을 전해요",
+    `<p class="notice">게임 속 접수만 해요. 실제 이메일이나 민원은 보내지 않아요. 초안은 선생님과 함께 확인해 주세요.</p><form id="letter"><label>편지 유형<select name="type">${["문제 해결 제안", "주민에게 감사", "우리 동네 소개"].map((t) => `<option ${d.type === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>${[
+      ["recipient", "받는 대상", "예: 마을 주민 여러분"],
+      [
+        "problem",
+        "발견한 문제와 장소",
+        "예: 학교 앞 점자블록 위에 상자가 있어요",
+      ],
+      ["difficulty", "주민이 겪는 어려움", "예: 길을 찾는 데 방해가 돼요"],
+      [
+        "proposal",
+        "내가 제안하는 해결 방법",
+        "예: 통행로를 비우고 담당 기관에 알려요",
+      ],
+      ["promise", "함께 실천할 약속", "예: 점자블록 위에 물건을 놓지 않아요"],
+      ["alias", "보내는 사람의 별명", "전체 실명은 필요하지 않아요"],
+    ]
+      .map(
+        ([name, label, placeholder]) =>
+          `<label>${label}<input name="${name}" value="${h(d[name] || "")}" placeholder="${placeholder}" maxlength="300"></label>`,
+      )
+      .join(
+        "",
+      )}<label>자유롭게 덧붙이기<textarea name="free" maxlength="3000">${h(d.free || "")}</textarea></label><div class="actions"><button type="button" id="draft">초안 저장</button><button class="primary">미리보기</button></div></form><h3 style="margin-top:25px">접수한 편지 ${state.letters.length}통</h3><div class="stack">${state.letters.map((l, i) => `<button data-letter="${i}">${h(l.type)} · ${h(l.alias || "탐험가")} · ${h(l.date)}</button>`).join("")}</div>`,
+  );
+  const form = root.querySelector("form");
+  function saveDraft() {
+    state.letterDraft = Object.fromEntries(new FormData(form));
+    return saveState(state);
+  }
+  form.oninput = saveDraft;
+  root.querySelector("#draft").onclick = () => {
+    if (saveDraft()) toast("편지 초안을 이 브라우저에 저장했어요.");
+  };
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    saveDraft();
+    if (
+      !state.letterDraft.recipient?.trim() ||
+      !state.letterDraft.alias?.trim() ||
+      !(state.letterDraft.problem?.trim() || state.letterDraft.free?.trim())
+    ) {
+      toast("받는 대상, 별명, 편지 내용을 적어 주세요.");
+      return;
+    }
+    previewLetter(state.letterDraft);
+  };
+  root
+    .querySelectorAll("[data-letter]")
+    .forEach(
+      (b) =>
+        (b.onclick = () =>
+          previewLetter(state.letters[+b.dataset.letter], true)),
+    );
+}
+function previewLetter(d, received = false) {
+  const text = letterText(d),
+    r = open(
+      "편지 미리보기",
+      `<div class="paper-letter">${h(text)}</div><div class="actions">${!received ? '<button id="edit">고쳐 쓰기</button><button id="submit" class="primary">게임 속 우체통 접수</button>' : ""}<button id="download">텍스트로 저장</button><button id="print">인쇄</button></div>`,
+    );
+  r.querySelector("#download").onclick = () =>
+    download("선생님-확인용-편지-초안.txt", text, "text/plain;charset=utf-8");
+  r.querySelector("#print").onclick = () => {
+    $(".printed").textContent = text;
+    window.print();
+  };
+  if (!received) {
+    r.querySelector("#edit").onclick = letter;
+    r.querySelector("#submit").onclick = (e) => {
+      e.target.disabled = true;
+      state.letters.push({
+        ...d,
+        id: crypto.randomUUID(),
+        date: new Date().toLocaleDateString("ko-KR"),
+      });
+      state.letterDraft = {};
+      persist();
+      world.delivery = 0.01;
+      close();
+      toast("게임 속 편지가 접수되었어요. 솔솔이 마을 안에서 배달해요.");
+    };
+  }
+}
+const places = [
+  { id: "school", name: "학교", x: -10, z: -5 },
+  { id: "library", name: "도서관", x: 1, z: -10 },
+  { id: "apartment", name: "아파트", x: 14, z: -1 },
+  { id: "house", name: "주택가", x: 20, z: 8 },
+  { id: "lake", name: "금호지", x: 24, z: -18 },
+  { id: "forest", name: "숲길", x: -19, z: -11 },
+  { id: "postman", name: "우체통", x: 4, z: 8 },
+  { id: "bins", name: "수거함", x: 11, z: 10 },
+];
+function drawMap(canvas, large = false) {
+  const ctx = canvas.getContext("2d"),
+    w = canvas.width,
+    hh = canvas.height;
+  ctx.clearRect(0, 0, w, hh);
+  ctx.fillStyle = "#dce8c2";
+  ctx.fillRect(0, 0, w, hh);
+  const x = (v) => ((v + 33) / 66) * w,
+    z = (v) => ((v + 28) / 56) * hh;
+  ctx.fillStyle = "#c7d6b0";
+  for (let i = 0; i < 20; i++) {
+    ctx.beginPath();
+    ctx.arc(
+      x(Math.sin(i * 13) * 30),
+      z(Math.cos(i * 17) * 25),
+      large ? 10 : 5,
+      0,
+      7,
+    );
+    ctx.fill();
+  }
+  ctx.strokeStyle = "#f7ecd2";
+  ctx.lineWidth = large ? 22 : 9;
+  ctx.beginPath();
+  ctx.moveTo(x(-26), z(3));
+  ctx.lineTo(x(28), z(3));
+  ctx.moveTo(x(1), z(-20));
+  ctx.lineTo(x(1), z(17));
+  ctx.stroke();
+  ctx.fillStyle = "#8bbfc1";
+  ctx.beginPath();
+  ctx.ellipse(x(24), z(-18), w * 0.12, hh * 0.11, 0, 0, 7);
+  ctx.fill();
+  for (const p of places) {
+    ctx.fillStyle = "#92a681";
+    ctx.fillRect(x(p.x) - 5, z(p.z) - 5, 10, 9);
+    if (large) {
+      ctx.fillStyle = "#48604a";
+      ctx.font = "15px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(p.name, x(p.x), z(p.z) + 22);
+    }
+  }
+  for (const a of works) {
+    const p = habitats[a.habitat];
+    ctx.fillStyle = "#b77d5b";
+    ctx.beginPath();
+    ctx.arc(
+      x(p.x) + ((hash(a.id) % 13) - 6),
+      z(p.z) + ((hash(a.id + "a") % 13) - 6),
+      large ? 6 : 3,
+      0,
+      7,
+    );
+    ctx.fill();
+  }
+  for (const id of Object.keys(targets)) {
+    if (
+      (state.started.includes(id) && !state.completed.includes(id)) ||
+      tracked === id
+    ) {
+      const [px, pz] = targets[id];
+      ctx.strokeStyle = "#b17a42";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x(px), z(pz), large ? 16 : 7, 0, 7);
+      ctx.stroke();
+      if (large) {
+        ctx.fillStyle = "#96653d";
+        ctx.font = "12px sans-serif";
+        ctx.fillText("활동 중", x(px), z(pz) - 20);
+      }
+    }
+  }
+  const p = world?.player.position || { x: -10, z: 1 };
+  ctx.fillStyle = "#355e4e";
+  ctx.beginPath();
+  ctx.arc(x(p.x), z(p.z), large ? 8 : 5, 0, 7);
+  ctx.fill();
+  ctx.strokeStyle = "#fff9df";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  if (large) {
+    ctx.font = "bold 14px sans-serif";
+    ctx.fillText(world?.indoor ? "나 (실내)" : "나", x(p.x), z(p.z) - 14);
+  }
+}
+function hash(str) {
+  let n = 0;
+  for (const c of str) n = (n * 31 + c.charCodeAt(0)) >>> 0;
+  return n;
+}
+function showMap(focusId) {
+  const root = open(
+    "우리 마을 탐험 지도",
+    `<p class="small">실제 금산면을 모티브로 수업 동선에 맞게 줄인 축약 지도예요. 실제 길 찾기용 지도가 아니에요.</p><canvas id="large-map" class="map-large" width="820" height="550" aria-label="마을과 작품의 위치"></canvas><div class="legend"><span>● 초록: 나</span><span>● 갈색: 학생 작품</span><span>◎ 활동 중인 곳</span></div>${tracked ? `<p class="notice">찾아갈 곳: ${h(content.quests[tracked]?.title || "활동 위치")}</p>` : ""}<h3>우리 반의 관찰 지도</h3><div class="stack">${works.map((a) => `<button data-art="${h(a.id)}">♧ ${h(a.name)} · ${habitats[a.habitat].name}${a.id === focusId ? " ← 선택한 작품" : ""}</button>`).join("") || '<p class="small">사진기에서 그림을 등록하면 이 지도에도 나타나요.</p>'}</div>`,
+    "wide",
+  );
+  drawMap(root.querySelector("canvas"), true);
+  root
+    .querySelectorAll("[data-art]")
+    .forEach((b) => (b.onclick = () => artDetail(b.dataset.art)));
+  if (focusId) {
+    const button = [...root.querySelectorAll("[data-art]")].find(
+      (b) => b.dataset.art === focusId,
+    );
+    button?.focus();
+  }
+}
+async function refreshWorks() {
+  works = await artStore.all();
+  await world?.setArt(works, state.settings);
+}
+async function catalog() {
+  const root = open(
+    "우리 반 생태 도감",
+    `<p class="eyebrow">작은 관찰이 모여, 커다란 우리 마을</p><p class="small">학생의 관찰·표현 작품 ${works.length}개 · 확인된 지역 서식 자료와 구분해요.<br>3D 마을에는 최대 ${Math.min(30, state.settings.artLimit)}개가 움직이고, 지도·도감에는 모든 작품이 보여요.</p><div class="cards" id="art-list"></div><div class="actions"><button id="new" class="primary">내 그림 등록하기</button><button id="export">학급 작품 묶음 내보내기</button><button id="import">작품 묶음 가져오기</button></div>`,
+    "wide",
+  );
+  const list = root.querySelector("#art-list");
+  for (const a of works) {
+    const card = document.createElement("article");
+    card.className = "card";
+    const u = URL.createObjectURL(a.blob);
+    card.innerHTML = `<img class="art-thumb" alt="${h(a.name)}"><h3>${h(a.name)}</h3><p class="small">${h(a.alias || "탐험가")} · ${habitats[a.habitat].name}</p><button>작품 살펴보기</button>`;
+    const img = card.querySelector("img");
+    img.onload = () => URL.revokeObjectURL(u);
+    img.onerror = () => URL.revokeObjectURL(u);
+    img.src = u;
+    card.querySelector("button").onclick = () => artDetail(a.id);
+    list.append(card);
+  }
+  if (!works.length)
+    list.innerHTML =
+      '<div class="card"><h3>첫 번째 생태 친구를 기다려요</h3><p>종이에 그린 그림을 사진으로 찍거나, 저장한 그림을 골라 보세요.</p></div>';
+  root.querySelector("#new").onclick = () => $("#image-input").click();
+  root.querySelector("#export").onclick = async () => {
+    try {
+      download(
+        "금산마을-학급작품.json",
+        JSON.stringify(await exportWorks(works)),
+      );
+    } catch {
+      toast("작품 내보내기를 완료하지 못했어요. 다시 시도해 주세요.");
+    }
+  };
+  root.querySelector("#import").onclick = () =>
+    chooseJSON(async (data) => {
+      const incoming = await decodeBundle(data);
+      await artStore.putMany(incoming);
+      await refreshWorks();
+      catalog();
+      toast(
+        "같은 작품 ID는 새 자료로 갱신했어요. 개인 편지와 소감은 공유하지 않아요.",
+      );
+    });
+}
+function artDetail(id) {
+  const a = works.find((a) => a.id === id);
+  if (!a) return;
+  const root = open(
+    a.name,
+    `<span class="badge">학생 관찰·표현 작품</span><img id="detail-image" class="art-thumb" style="height:220px" alt="${h(a.name)}"><p>만든 이: ${h(a.alias || "탐험가")}<br>관찰 장소: ${h(a.observed || "미입력")}<br>서식 구역: ${habitats[a.habitat].name}</p><p>${h(a.description || "아직 설명이 없어요.")}</p><div class="actions"><button id="map">지도 위치</button><button id="edit">이름·설명·위치 수정</button><button id="delete">작품 삭제</button></div>`,
+  );
+  const u = URL.createObjectURL(a.blob),
+    img = root.querySelector("#detail-image");
+  img.onload = () => URL.revokeObjectURL(u);
+  img.onerror = () => URL.revokeObjectURL(u);
+  img.src = u;
+  root.querySelector("#map").onclick = () => showMap(id);
+  root.querySelector("#edit").onclick = () => editArt(a);
+  root.querySelector("#delete").onclick = () => {
+    const r = open(
+      "이 작품을 삭제할까요?",
+      `<p>${h(a.name)}이 마을·지도·도감에서 함께 사라져요. 먼저 작품 묶음을 내보내면 보관할 수 있어요.</p><button id="delete" class="primary">삭제하기</button>`,
+    );
+    r.querySelector("#delete").onclick = async () => {
+      try {
+        await artStore.remove(id);
+        await refreshWorks();
+        catalog();
+        toast("작품을 삭제했어요.");
+      } catch {
+        toast("삭제를 저장하지 못했어요. 저장소 권한을 확인해 주세요.");
+      }
+    };
+  };
+}
+function editArt(a) {
+  const root = open(
+    "작품 기록 고치기",
+    `<form>${[
+      ["name", "생물 이름"],
+      ["alias", "별명 또는 작품 이름"],
+      ["description", "생태 설명"],
+      ["observed", "관찰 장소"],
+    ]
+      .map(
+        ([k, t]) =>
+          `<label>${t}<input name="${k}" value="${h(a[k])}" maxlength="${k === "description" ? 500 : 100}" ${k === "name" ? "required" : ""}></label>`,
+      )
+      .join("")}<label>서식 구역<select name="habitat">${Object.entries(
+      habitats,
+    )
+      .map(
+        ([k, v]) =>
+          `<option value="${k}" ${a.habitat === k ? "selected" : ""}>${v.name}</option>`,
+      )
+      .join(
+        "",
+      )}</select></label><label>움직임<select name="kind"><option value="animal" ${a.kind === "animal" ? "selected" : ""}>동물 · 천천히 걷기</option><option value="plant" ${a.kind === "plant" ? "selected" : ""}>식물 · 살짝 흔들기</option></select></label><button class="primary">변경 저장</button></form>`,
+  );
+  root.querySelector("form").onsubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await artStore.put({
+        ...a,
+        ...Object.fromEntries(new FormData(e.target)),
+        updatedAt: Date.now(),
+      });
+      await refreshWorks();
+      artDetail(a.id);
+      toast("마을·지도·도감에 함께 반영했어요.");
+    } catch {
+      toast("수정을 저장하지 못했어요. 저장 공간을 확인해 주세요.");
+    }
+  };
+}
+function chooseJSON(callback) {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".json,application/json";
+  input.onchange = async () => {
+    try {
+      const f = input.files[0];
+      if (!f) return;
+      if (f.size > 100 * 1024 * 1024)
+        throw new Error("묶음 파일은 100MB 이하여야 해요.");
+      await callback(JSON.parse(await f.text()));
+    } catch (e) {
+      toast(
+        `자료를 읽지 못했어요. ${e.message || "파일 형식을 확인해 주세요."}`,
+      );
+    }
+  };
+  input.click();
+}
+function validateContent(c) {
+  if (
+    !c ||
+    typeof c.schoolName !== "string" ||
+    !c.schoolName.trim() ||
+    typeof c.className !== "string" ||
+    typeof c.meetingDate !== "string" ||
+    typeof c.topic !== "string" ||
+    !c.meeting ||
+    !["roles", "promise", "period"].every(
+      (k) => typeof c.meeting[k] === "string",
+    )
+  )
+    throw new Error("학교·학급·회의 정보를 확인해 주세요.");
+  for (const key of ["agendas", "quizzes", "sources", "waste"]) {
+    if (!Array.isArray(c[key]) || c[key].length > 200)
+      throw new Error(`${key} 목록을 확인해 주세요.`);
+    const ids = c[key].map((x) => x.id);
+    if (
+      ids.some((x) => typeof x !== "string" || !x) ||
+      new Set(ids).size !== ids.length
+    )
+      throw new Error(`${key} ID는 고유해야 해요.`);
+  }
+  if (
+    !c.quests ||
+    !["path", "trash", "lake"].every(
+      (id) =>
+        c.quests[id]?.id === id &&
+        typeof c.quests[id].title === "string" &&
+        typeof c.quests[id].description === "string" &&
+        typeof c.quests[id].reward === "string" &&
+        c.quests[id].target > 0,
+    )
+  )
+    throw new Error("path·trash·lake 미션 ID는 유지해 주세요.");
+  for (const a of c.agendas)
+    if (
+      !c.quests[a.quest] ||
+      !["title", "problem", "action"].every((k) => typeof a[k] === "string")
+    )
+      throw new Error("안건의 미션 연결을 확인해 주세요.");
+  for (const q of c.quizzes) {
+    if (
+      !Array.isArray(q.options) ||
+      q.options.length < 2 ||
+      q.options.length > 3 ||
+      !q.options.every((o) => typeof o === "string") ||
+      !Number.isInteger(q.answer) ||
+      q.answer < 0 ||
+      q.answer >= q.options.length ||
+      !["question", "explanation", "reviewStatus", "sourceTitle"].every(
+        (k) => typeof q[k] === "string",
+      )
+    )
+      throw new Error("퀴즈 문장·선택지·정답 번호를 확인해 주세요.");
+    if (q.reviewStatus === "검토 완료" && (!q.checkedAt || !q.sourceTitle))
+      throw new Error("검토한 퀴즈는 출처와 확인일을 적어 주세요.");
+  }
+  for (const s of c.sources)
+    if (
+      !["sourceTitle", "sourceUrl", "reviewStatus", "text"].every(
+        (k) => typeof s[k] === "string",
+      ) ||
+      (s.reviewStatus === "검토 완료" &&
+        (!s.checkedAt || !s.sourceUrl.startsWith("https://")))
+    )
+      throw new Error("자료의 문장·출처·검토일을 확인해 주세요.");
+  for (const key of ["otter", "turtle", "crane", "house", "postman"])
+    if (
+      !c.dialogues?.[key] ||
+      !["name", "story", "before", "during", "after"].every(
+        (k) => typeof c.dialogues[key][k] === "string",
+      )
+    )
+      throw new Error("주민 대사 형식을 확인해 주세요.");
+  if (
+    !c.tactile ||
+    typeof c.tactile.text !== "string" ||
+    !Array.isArray(c.tactile.solution) ||
+    c.tactile.solution.length !== 5 ||
+    c.tactile.solution.some(
+      (t) =>
+        !["dot", "line"].includes(t.type) ||
+        !Number.isFinite(t.rotation) ||
+        t.rotation % 90 !== 0,
+    )
+  )
+    throw new Error(
+      "블록 정답은 5칸의 점형·선형과 90도 단위 방향으로 입력해 주세요.",
+    );
+  for (const w of c.waste)
+    if (
+      !["id", "name", "category"].every((k) => typeof w[k] === "string") ||
+      !["village", "lake"].includes(w.zone) ||
+      ![w.x, w.z].every(Number.isFinite) ||
+      Math.abs(w.x) > 29 ||
+      Math.abs(w.z) > 24
+    )
+      throw new Error("쓰레기 ID·이름·분류·위치를 확인해 주세요.");
+  const n = c.waste.filter((w) => w.zone === "village").length,
+    m = c.waste.filter((w) => w.zone === "lake").length;
+  if (
+    c.quests.trash.target !== n ||
+    c.quests.lake.target !== m + 3 ||
+    c.quests.path.target !== 1
+  )
+    throw new Error(
+      `목표 수량은 길 1, 주택가 ${n}, 호수 ${m + 3}(분류+쉼터+구별+인계)로 맞춰 주세요.`,
+    );
+  return c;
+}
+function teacher() {
+  const root = open(
+    "교사용 수업 자료 편집",
+    `<span class="badge">로컬 편집 메뉴 · 계정 권한 보호 기능 아님</span><p class="small">예시 회의·안건 연결·주민의 상태별 대사·퀴즈·출처·분류 기준·미션 목표를 JSON으로 수정해요. 학생 화면에는 <b>검토 완료</b> 자료만 보여요. 원문을 확인한 뒤 문장을 작성하고 checkedAt에 확인일을 적어 주세요. ID는 진행 기록과 연결되므로 유지해 주세요.</p><label>편집할 자료<select id="section">${[
+      ["meeting", "학급 회의 결과"],
+      ["dialogues", "주민 대사"],
+      ["quizzes", "퀴즈"],
+      ["sources", "출처·지역 학습 카드"],
+      ["missions", "미션·분류·안내 블록"],
+      ["all", "전체 수업 자료"],
+    ]
+      .map(([k, v]) => `<option value="${k}">${v}</option>`)
+      .join(
+        "",
+      )}</select></label><textarea id="json-editor" class="code" spellcheck="false" aria-label="수업 자료 JSON"></textarea><div class="actions"><button id="save" class="primary">자료 저장</button><button id="export">수업 자료 JSON 내보내기</button><button id="import">수업 자료 JSON 가져오기</button><button id="reset">예시 자료로 되돌리기</button><button id="works">학생 작품 관리</button></div><div id="teacher-result" aria-live="polite"></div><p class="notice">시설 배치·쓰레기 위치를 바꾸면 새로고침 뒤 마을에 반영돼요. 현재 활동 기록은 유지됩니다. 학급 공유 서버와 교사 계정 인증은 아직 연결하지 않았어요.</p>`,
+    "wide",
+  );
+  const fields = {
+    meeting: [
+      "schoolName",
+      "className",
+      "meetingDate",
+      "topic",
+      "meeting",
+      "agendas",
+    ],
+    dialogues: ["dialogues"],
+    quizzes: ["quizzes"],
+    sources: ["sources"],
+    missions: ["quests", "waste", "tactile"],
+    all: Object.keys(content),
+  };
+  const editor = root.querySelector("#json-editor"),
+    section = root.querySelector("#section");
+  function fill() {
+    editor.value = JSON.stringify(
+      Object.fromEntries(fields[section.value].map((k) => [k, content[k]])),
+      null,
+      2,
+    );
+  }
+  fill();
+  let dirty = false;
+  editor.oninput = () => (dirty = true);
+  section.onchange = () => {
+    if (dirty) {
+      toast("편집 내용은 먼저 저장해 주세요.");
+      section.value = section.dataset.previous || "meeting";
+      return;
+    }
+    fill();
+    section.dataset.previous = section.value;
+  };
+  function apply(c) {
+    validateContent(c);
+    if (!saveContent(c)) return;
+    content = c;
+    persist();
+    dirty = false;
+    fill();
+    root.querySelector("#teacher-result").textContent =
+      "✓ 자료를 저장했어요. 새로고침하면 마을 배치와 간판에도 반영돼요.";
+  }
+  root.querySelector("#save").onclick = () => {
+    try {
+      const patch = JSON.parse(editor.value),
+        next = structuredClone(content);
+      for (const k of fields[section.value]) if (k in patch) next[k] = patch[k];
+      apply(next);
+    } catch (e) {
+      root.querySelector("#teacher-result").textContent =
+        `저장하지 않았어요. ${e.message}`;
+    }
+  };
+  root.querySelector("#export").onclick = () =>
+    download("금산마을-수업자료.json", JSON.stringify(content, null, 2));
+  root.querySelector("#import").onclick = () =>
+    chooseJSON((data) => apply(data));
+  root.querySelector("#reset").onclick = () => {
+    const r = open(
+      "예시 수업 자료로 돌아갈까요?",
+      `<p>편집한 수업 자료를 예시로 바꿔요. 작품과 활동 기록은 유지돼요.</p><button id="yes" class="primary">예시 자료로 바꾸기</button>`,
+    );
+    r.querySelector("#yes").onclick = () => {
+      if (saveContent(defaults)) {
+        content = structuredClone(defaults);
+        persist();
+        teacher();
+      }
+    };
+  };
+  root.querySelector("#works").onclick = catalog;
+}
+function settings() {
+  const s = state.settings;
+  const root = open(
+    "나에게 맞는 탐험",
+    `<form id="settings"><label>화질<select name="quality"><option value="normal" ${s.quality === "normal" ? "selected" : ""}>보통</option><option value="low" ${s.quality === "low" ? "selected" : ""}>낮음 · 그림자 줄이기</option></select></label><label>글자 크기<select name="font"><option value="1" ${+s.font === 1 ? "selected" : ""}>기본</option><option value="1.15" ${+s.font === 1.15 ? "selected" : ""}>크게</option><option value="1.3" ${+s.font === 1.3 ? "selected" : ""}>더 크게</option></select></label><label>마을에서 움직이는 작품 수<select name="artLimit">${[5, 15, 30].map((n) => `<option value="${n}" ${+s.artLimit === n ? "selected" : ""}>${n}개</option>`).join("")}</select></label><label>작품 이름표<select name="displayName"><option value="creature" ${s.displayName === "creature" ? "selected" : ""}>생물 이름</option><option value="alias" ${s.displayName === "alias" ? "selected" : ""}>별명 또는 작품 이름</option></select></label><label class="check"><input name="motion" type="checkbox" ${s.motion ? "checked" : ""}>작품 움직임·흔들림 줄이기</label><label class="check"><input name="sound" type="checkbox" ${s.sound ? "checked" : ""}>직접 만든 짧은 배경 선율 켜기</label><button class="primary">설정 적용</button></form><hr><p class="small">개인 체험판 · 이 브라우저에만 저장돼요. 다른 기기에는 자동 공유되지 않아요. 공개 기기에서 사용을 마치면 자료를 보관한 뒤 브라우저 사이트 데이터를 지워 주세요.</p><div class="actions"><button id="backup">개인 기록 백업</button><button id="restore">개인 기록 복원</button><button id="teacher">교사용 수업 편집</button><button id="welcome">시작 안내 다시 보기</button></div>`,
+  );
+  root.querySelector("form").onsubmit = async (e) => {
+    e.preventDefault();
+    const d = new FormData(e.target);
+    state.settings = {
+      ...state.settings,
+      ...Object.fromEntries(d),
+      font: +d.get("font"),
+      artLimit: +d.get("artLimit"),
+      motion: d.has("motion"),
+      sound: d.has("sound"),
+    };
+    applySettings();
+    persist();
+    await world.setArt(works, state.settings);
+    toast("탐험 설정을 적용했어요.");
+  };
+  root.querySelector("#teacher").onclick = teacher;
+  root.querySelector("#welcome").onclick = welcome;
+  root.querySelector("#backup").onclick = async () => {
+    try {
+      download(
+        "금산마을-개인기록-비공개.json",
+        JSON.stringify({
+          schema: "geumsan-private",
+          version: 1,
+          state,
+          content,
+          art: await exportWorks(works),
+        }),
+      );
+    } catch {
+      toast("백업을 만들지 못했어요. 저장 공간과 파일 권한을 확인해 주세요.");
+    }
+  };
+  root.querySelector("#restore").onclick = () =>
+    chooseJSON(async (b) => {
+      if (
+        b.schema !== "geumsan-private" ||
+        b.version !== 1 ||
+        !b.state ||
+        !b.art
+      )
+        throw new Error("개인 기록 백업 파일을 선택해 주세요.");
+      validateState(b.state);
+      validateContent(b.content);
+      const incoming = await decodeBundle(b.art);
+      const r = open(
+        "개인 기록을 복원할까요?",
+        `<p>활동·편지·소감·교사 자료를 백업 내용으로 바꿔요. 작품은 ID로 합칩니다.</p><button id="yes" class="primary">백업 복원</button>`,
+      );
+      r.querySelector("#yes").onclick = async () => {
+        try {
+          await artStore.putMany(incoming);
+          content = b.content;
+          state = {
+            ...initialState(),
+            ...b.state,
+            settings: { ...initialState().settings, ...b.state.settings },
+          };
+          saveContent(content);
+          persist();
+          applySettings();
+          await refreshWorks();
+          close();
+          toast("기록을 복원했어요. 배치 변경은 새로고침 뒤 반영돼요.");
+        } catch {
+          toast("복원을 완료하지 못했어요. 저장 공간을 확인해 주세요.");
+        }
+      };
+    });
+}
+function validateState(s) {
+  for (const k of [
+    "started",
+    "completed",
+    "collected",
+    "sorted",
+    "badges",
+    "quiz",
+    "read",
+  ])
+    if (!Array.isArray(s[k]) || !s[k].every((x) => typeof x === "string"))
+      throw new Error("활동 기록 형식을 확인해 주세요.");
+  if (
+    !Array.isArray(s.letters) ||
+    !s.letters.every((l) => typeof l.id === "string") ||
+    !Array.isArray(s.reflections) ||
+    !s.lake ||
+    typeof s.lake !== "object" ||
+    !s.settings ||
+    ![5, 15, 30].includes(+s.settings.artLimit) ||
+    ![1, 1.15, 1.3].includes(+s.settings.font)
+  )
+    throw new Error("편지·소감·설정 형식을 확인해 주세요.");
+}
+let audio = null,
+  audioTimer = null,
+  note = 0;
+function applySettings() {
+  document.documentElement.style.fontSize = `${16 * state.settings.font}px`;
+  world?.configure(state.settings);
+  clearInterval(audioTimer);
+  audioTimer = null;
+  if (!state.settings.sound) {
+    audio?.suspend();
+    return;
+  }
+  try {
+    audio ??= new AudioContext();
+    audio.resume();
+    audioTimer = setInterval(() => {
+      if (document.hidden || !state.settings.sound) return;
+      const osc = audio.createOscillator(),
+        gain = audio.createGain(),
+        now = audio.currentTime;
+      osc.type = "sine";
+      osc.frequency.value = [
+        261.63, 329.63, 392, 440, 392, 329.63, 293.66, 329.63,
+      ][note++ % 8];
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.028, now + 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+      osc.connect(gain);
+      gain.connect(audio.destination);
+      osc.start(now);
+      osc.stop(now + 1.3);
+    }, 900);
+  } catch {
+    toast("이 기기에서는 소리를 재생하지 못했어요. 무음으로 탐험할 수 있어요.");
+  }
+}
+function welcome() {
+  const root = open(
+    "금산마을에 오신 걸 환영해요",
+    `<div class="welcome-banner"><span class="eyebrow">OUR LITTLE VILLAGE, OUR BIG DISCOVERIES</span><h2 class="welcome-title">한 걸음, 한 이야기.<br>우리가 돌보는 작은 마을</h2><p>주민의 이야기를 듣고, 마을을 돌보고,<br>내 그림으로 생태 지도를 채워 보세요.</p><div class="feature-row"><span>♧ 주민과 대화</span><span>✧ 함께 문제 해결</span><span>▣ 움직이는 내 그림</span></div></div><p class="small">진주시 금산면의 장소 이름을 빌려 수업 동선에 맞게 만든 <b>축약 지도</b>예요. 주민은 가상의 인물이며 실제 동물 서식의 증거가 아니에요. 학교·회의 결과는 예시입니다.</p><p class="notice">처음에는 바로 뒤의 학교 문에서 <b>E키</b>를 눌러 들어가 보세요. 기록과 그림은 이 브라우저에만 저장돼요. 별도 계정·유료 API가 필요하지 않아요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`,
+  );
+  root.querySelector("#start").onclick = () => {
+    state.welcomed = true;
+    persist();
+    close();
+  };
+}
+function interact(id) {
+  if (id.startsWith("art:")) return artDetail(id.slice(4));
+  if (id.startsWith("waste:")) return pickup(id.slice(6));
+  switch (id) {
+    case "school":
+    case "library":
+      world.enter(id);
+      $("#place").textContent =
+        id === "school" ? "학교 · 우리 반 교실" : "도서관 · 이야기 책장";
+      return;
+    case "exit":
+      world.exit();
+      $("#place").textContent = "학교 앞 산책길";
+      return;
+    case "board":
+      return board();
+    case "books":
+      return books();
+    case "otter":
+    case "turtle":
+    case "crane":
+    case "postman":
+    case "resident":
+      return talk(id);
+    case "house":
+      return talk("resident");
+    case "apartment":
+      toast("여러 가족이 함께 사는 공간이에요. 공동 시설과 길을 배려해요.");
+      return;
+    case "path":
+      return pathPuzzle();
+    case "bins":
+      return bins();
+    case "mailbox":
+      return letter();
+    case "eco-map":
+      return showMap();
+    case "forest":
+      return books();
+    case "rest":
+    case "manager":
+    case "specimen":
+      return lakeAction(id);
+  }
+}
+const pages = { map: showMap, bag, catalog, settings };
+document
+  .querySelectorAll("[data-page]")
+  .forEach((b) => (b.onclick = () => pages[b.dataset.page]()));
+$("#camera").onclick = () => $("#image-input").click();
+$("#image-input").onchange = async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (file)
+    await imageEditor(file, ui, async (a) => {
+      await artStore.put(a);
+      await refreshWorks();
+    });
+};
+document.querySelectorAll("[data-key]").forEach((b) => {
+  b.onpointerdown = (e) => {
+    e.preventDefault();
+    b.setPointerCapture(e.pointerId);
+    if (world?.moveEnabled) world.keys.add(b.dataset.key);
+  };
+  b.onpointerup =
+    b.onpointercancel =
+    b.onlostpointercapture =
+      () => world?.keys.delete(b.dataset.key);
+});
+try {
+  world = new World($("#world"), {
+    interact,
+    near: (e) => {
+      const b = $("#interact");
+      b.hidden = !e;
+      if (e) {
+        b.textContent = `E · ${e.title}`;
+        b.onclick = () => interact(e.id);
+      }
+    },
+    warning: toast,
+    state,
+    content,
+  });
+  world.canvas.addEventListener("webglcontextlost", (e) => {
+    e.preventDefault();
+    world.setPaused(true);
+    open(
+      "화면 연결이 잠시 끊겼어요",
+      '<p>진행 기록은 저장되어 있어요. 다른 그래픽 프로그램을 닫고 이 페이지를 새로고침해 주세요.</p><button onclick="location.reload()">새로고침</button>',
+    );
+  });
+  applySettings();
+  renderHud();
+  try {
+    await refreshWorks();
+  } catch {
+    toast(
+      "그림 저장소를 열지 못했어요. 비공개 모드·저장 권한을 확인해 주세요. 다른 학습 활동은 계속할 수 있어요.",
+    );
+  }
+  $("#loading").remove();
+  if (!state.welcomed) welcome();
+  setInterval(() => {
+    drawMap($("#mini"));
+    if (!world.indoor) {
+      const p = world.player.position;
+      $("#place").textContent =
+        p.x > 15 && p.z < -5
+          ? "금호지 호숫가"
+          : p.x < -14 && p.z < 0
+            ? "월아산 숲길"
+            : p.x > 8
+              ? "햇살 주택가"
+              : p.z > 5
+                ? "마을 광장"
+                : "학교 앞 산책길";
+    }
+  }, 250);
+} catch (e) {
+  $("#loading")?.remove();
+  const r = open(
+    "3D 화면을 열지 못했어요",
+    `<p>WebGL을 사용할 수 없거나 그래픽 초기화에 실패했어요. 최신 Chrome·Edge·Safari에서 하드웨어 가속을 켜고 다시 열어 주세요.</p><p class="small">브라우저 설정 → 시스템 → 그래픽 가속을 확인해요. 다른 기기에서 접속하는 것도 방법이에요.</p><button id="retry">다시 시도</button>`,
+  );
+  r.querySelector("#retry").onclick = () => location.reload();
+  console.error(e);
+}
+export { world, state, content, works, validateContent };
