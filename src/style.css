@@ -756,3 +756,14 @@ a {
     transition: none !important;
   }
 }
+
+/* The footer's transparent flex area must not cover the interaction button. */
+.bottom {
+  pointer-events: none;
+}
+.bottom > button {
+  pointer-events: auto;
+}
+.interaction {
+  z-index: 2;
+}

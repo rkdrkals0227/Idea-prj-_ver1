@@ -1279,7 +1279,7 @@ try {
       b.hidden = !e;
       if (e) {
         b.textContent = `E · ${e.title}`;
-        b.onclick = () => interact(e.id);
+        b.onclick = () => world?.interactNearby();
       }
     },
     warning: toast,

@@ -22,7 +22,12 @@ async function position(page, x, z) {
     { x, z },
   );
   // Wait for the game's proximity update, even under software WebGL rendering.
-  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
 }
 async function act(page, x, z, text) {
   await position(page, x, z);
@@ -558,4 +563,90 @@ test("forest, apartment and library have their own questions; unavailable contex
   await page.locator("#quiz").click();
   await expect(page.locator(".modal-header h2")).toContainText("퀴즈 준비 중");
   await expect(page.locator("[data-answer]")).toHaveCount(0);
+});
+
+test("physical E and WASD work with Korean keyboard events without affecting text input", async ({
+  page,
+}) => {
+  await boot(page);
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ㄷ",
+        code: "KeyE",
+        bubbles: true,
+        cancelable: true,
+      }),
+    ),
+  );
+  await expect(page.locator("#place")).toContainText("교실");
+  await position(page, 0, -3.8);
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Process",
+        code: "KeyE",
+        isComposing: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    ),
+  );
+  await expect(
+    page.getByRole("heading", { name: "우리 학급 회의 결과", exact: true }),
+  ).toBeVisible();
+  await close(page);
+  await act(page, 0, 5, "나가기");
+  await position(page, 0, 3);
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ㅇ",
+        code: "KeyD",
+        bubbles: true,
+        cancelable: true,
+      }),
+    ),
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(
+        async () =>
+          (
+            await import(
+              document.querySelector(
+                'script[type="module"][src*="/src/main.js"]',
+              ).src
+            )
+          ).world.player.position.x,
+      ),
+    )
+    .toBeGreaterThan(0.2);
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new KeyboardEvent("keyup", { key: "ㅇ", code: "KeyD", bubbles: true }),
+    ),
+  );
+  await act(page, 4, 8, "우체통");
+  const input = page.locator('[name="recipient"]');
+  await input.fill("주민 여러분");
+  await input.dispatchEvent("keydown", {
+    key: "ㄷ",
+    code: "KeyE",
+    isComposing: true,
+  });
+  await expect(input).toHaveValue("주민 여러분");
+  await expect(page.getByRole("dialog")).toHaveCount(1);
+  await close(page);
+  await position(page, -29, 23);
+  await page.keyboard.press("e");
+  await expect(page.locator("#toast")).toContainText("가까이");
+  await position(page, -10, -1);
+  await page.locator("#interact").click();
+  await expect(page.locator("#place")).toContainText("교실");
+  await act(page, 0, 5, "나가기");
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await position(page, -10, -1);
+  await page.locator("#interact").click();
+  await expect(page.locator("#place")).toContainText("교실");
 });

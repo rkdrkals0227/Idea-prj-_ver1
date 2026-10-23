@@ -157,3 +157,20 @@ test("source quizzes require both approved source and its own approved question"
   source.reviewStatus = "검토 필요";
   assert.deepEqual(quizPool(c, "source:festival"), []);
 });
+
+import { gameKey, isTextEntry } from "../src/input.js";
+test("physical game keys accept Korean and IME events, with safe legacy fallback", () => {
+  assert.equal(gameKey({ key: "ㄷ", code: "KeyE" }), "e");
+  assert.equal(
+    gameKey({ key: "Process", code: "KeyE", isComposing: true }),
+    "e",
+  );
+  assert.equal(gameKey({ key: "ㅇ", code: "KeyD" }), "d");
+  assert.equal(gameKey({ key: "E" }), "e");
+  assert.equal(gameKey({ key: "ArrowUp" }), "arrowup");
+  assert.equal(gameKey({ key: "Enter", code: "Enter" }), null);
+  assert.equal(isTextEntry({ tagName: "INPUT" }), true);
+  assert.equal(isTextEntry({ tagName: "TEXTAREA" }), true);
+  assert.equal(isTextEntry({ tagName: "DIV", isContentEditable: true }), true);
+  assert.equal(isTextEntry({ tagName: "CANVAS" }), false);
+});

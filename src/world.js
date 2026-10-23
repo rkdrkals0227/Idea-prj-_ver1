@@ -1,3 +1,4 @@
+import { gameKey, isTextEntry } from "./input.js";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import manifest from "./data/asset-manifest.json";
@@ -113,19 +114,22 @@ export class World {
     window.addEventListener("resize", () => this.resize(host));
     this.resize(host);
     window.addEventListener("keydown", (e) => {
-      if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || !this.moveEnabled)
-        return;
       if (
-        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)
+        isTextEntry(e.target) ||
+        !this.moveEnabled ||
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey
       )
-        e.preventDefault();
-      this.keys.add(e.key.toLowerCase());
-      if (e.key.toLowerCase() === "e" && !e.repeat && this.nearest)
-        this.callbacks.interact(this.nearest.id);
+        return;
+      const key = gameKey(e);
+      if (!key) return;
+      e.preventDefault();
+      if (key === "e") {
+        if (!e.repeat) this.interactNearby();
+      } else this.keys.add(key);
     });
-    window.addEventListener("keyup", (e) =>
-      this.keys.delete(e.key.toLowerCase()),
-    );
+    window.addEventListener("keyup", (e) => this.keys.delete(gameKey(e)));
     window.addEventListener("blur", () => this.keys.clear());
     const ray = new THREE.Raycaster();
     this.canvas.addEventListener("pointerdown", (e) => {
@@ -632,8 +636,45 @@ export class World {
   }
   handover() {
     this.transfer?.mesh.removeFromParent();
-    const mesh = shape('box',0xc9ab78,[.55,.4,.45],[this.player.position.x,1.3,this.player.position.z],this.scene);
-    this.transfer={mesh,from:mesh.position.clone(),elapsed:0};
+    const mesh = shape(
+      "box",
+      0xc9ab78,
+      [0.55, 0.4, 0.45],
+      [this.player.position.x, 1.3, this.player.position.z],
+      this.scene,
+    );
+    this.transfer = { mesh, from: mesh.position.clone(), elapsed: 0 };
+  }
+  interactNearby() {
+    if (!this.moveEnabled) return;
+    const target = this.updateNearby();
+    if (target) this.callbacks.interact(target.id);
+    else
+      this.callbacks.warning(
+        "문이나 주민 가까이 가 주세요. 아래에 대상 이름이 나타나면 E키나 그 버튼으로 이야기할 수 있어요.",
+      );
+  }
+  updateNearby() {
+    const p = this.player.position;
+    let near = null,
+      min = 3.2;
+    for (const e of this.indoor ? this.roomEntities : this.entities) {
+      if (e.obj && !e.obj.visible) continue;
+      const d = Math.hypot(e.x - p.x, e.z - p.z);
+      if (d < min) {
+        near = e;
+        min = d;
+      }
+    }
+    if (near?.id !== this.nearest?.id) {
+      this.nearest = near;
+      this.callbacks.near(near);
+    }
+    if (this.ring) {
+      this.ring.visible = !!near;
+      if (near) this.ring.position.set(near.x, 0.07, near.z);
+    }
+    return near;
   }
   animate = () => {
     requestAnimationFrame(this.animate);
@@ -676,22 +717,7 @@ export class World {
     const target = new THREE.Vector3(p.x + 13, p.y + 21, p.z + 23);
     this.camera.position.lerp(target, 1 - Math.exp(-dt * 5));
     this.camera.lookAt(p.x, p.y, p.z - 1);
-    let near = null,
-      min = 3.2;
-    for (const e of this.indoor ? this.roomEntities : this.entities) {
-      if (e.obj && !e.obj.visible) continue;
-      const d = Math.hypot(e.x - p.x, e.z - p.z);
-      if (d < min) {
-        near = e;
-        min = d;
-      }
-    }
-    if (near?.id !== this.nearest?.id) {
-      this.nearest = near;
-      this.callbacks.near(near);
-    }
-    this.ring.visible = !!near;
-    if (near) this.ring.position.set(near.x, 0.07, near.z);
+    this.updateNearby();
     for (const a of this.art) {
       const h = habitats[a.data.habitat] || habitats.grass,
         move = a.data.kind === "animal" && !reduced;
@@ -705,13 +731,20 @@ export class World {
         1.2 + (reduced ? 0 : Math.sin(t * 2 + a.phase) * 0.07);
       a.sprite.material.rotation =
         a.data.kind === "plant" && !reduced ? Math.sin(t + a.phase) * 0.04 : 0;
-      if (move) a.sprite.scale.x = Math.abs(a.sprite.scale.x) * (Math.cos(q) > 0 ? 1 : -1);
+      if (move)
+        a.sprite.scale.x =
+          Math.abs(a.sprite.scale.x) * (Math.cos(q) > 0 ? 1 : -1);
     }
-    if(this.transfer){
-      const a=this.transfer; a.elapsed+=dt; const f=Math.min(a.elapsed/1.5,1);
-      a.mesh.position.lerpVectors(a.from,new THREE.Vector3(14,1.3,-10),f);
-      a.mesh.position.y+=Math.sin(f*Math.PI)*.8;
-      if(f===1){a.mesh.removeFromParent();this.transfer=null;}
+    if (this.transfer) {
+      const a = this.transfer;
+      a.elapsed += dt;
+      const f = Math.min(a.elapsed / 1.5, 1);
+      a.mesh.position.lerpVectors(a.from, new THREE.Vector3(14, 1.3, -10), f);
+      a.mesh.position.y += Math.sin(f * Math.PI) * 0.8;
+      if (f === 1) {
+        a.mesh.removeFromParent();
+        this.transfer = null;
+      }
     }
     if (this.delivery) {
       const e = this.entities.find((e) => e.id === "postman");
