@@ -1,3 +1,4 @@
+import { normalizeJourney } from "./journey.js";
 import { normalizeGuardian } from "./guardian.js";
 import { initialState } from "./logic.js";
 const KEY = "geumsan-state-v1",
@@ -14,6 +15,7 @@ export function loadState() {
           ...initialState(),
           ...d,
           guardian: normalizeGuardian(d.guardian),
+          journey: normalizeJourney(d.journey),
           lake: { ...initialState().lake, ...d.lake },
           settings: { ...initialState().settings, ...d.settings },
         }
@@ -138,7 +140,7 @@ export async function decodeBundle(bundle) {
         ids.has(a.id) ||
         !/^data:image\/(png|jpeg|webp);base64,/.test(a.image) ||
         a.image.length > 15 * 1024 * 1024 ||
-        !["lake", "forest", "grass"].includes(a.habitat)
+        !["lake", "forest", "grass", "river"].includes(a.habitat)
       )
         throw new Error("작품 ID·이미지·서식 구역을 확인해 주세요.");
       ids.add(a.id);
@@ -155,6 +157,8 @@ export async function decodeBundle(bundle) {
         alias: String(a.alias || "탐험가").slice(0, 40),
         description: String(a.description || "").slice(0, 500),
         observed: String(a.observed || "").slice(0, 100),
+        protection: String(a.protection || "").slice(0, 500),
+        exhibition: a.exhibition === "namgang" ? "namgang" : null,
         habitat: a.habitat,
         kind: a.kind === "plant" ? "plant" : "animal",
         blob,

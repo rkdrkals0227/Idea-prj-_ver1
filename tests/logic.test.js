@@ -188,6 +188,9 @@ import { defaultGuardianLegend } from "../src/data/guardian.js";
 test("guardian legend requires all sequential dialogue pages before quiz; wrong answers and repeats never add stamps", () => {
   const s = initialState(),
     lesson = defaultGuardianLegend;
+  s.journey.schoolReady = true;
+  s.completed = ["path", "trash"];
+  s.journey.met = ["turtle"];
   assert.equal(answerLegend(s, lesson, 0), "locked");
   assert.equal(readLegendPage(s, lesson, lesson.pages.at(-1).id), false);
   assert.equal(readLegendPage(s, lesson, "unknown-page"), false);
@@ -197,19 +200,20 @@ test("guardian legend requires all sequential dialogue pages before quiz; wrong 
   readLegendPage(s, lesson, lesson.pages[0].id);
   assert.equal(s.guardian.legendSeen.length, lesson.pages.length);
   assert.equal(answerLegend(s, lesson, 1), "wrong");
-  assert.equal(earnedGuardianStamps(s).length, 0);
+  assert.equal(earnedGuardianStamps(s).length, 1);
   assert.equal(answerLegend(s, lesson, 0), "earned");
   assert.equal(answerLegend(s, lesson, 0), "already");
   assert.deepEqual(
     earnedGuardianStamps(s).map((s) => s.id),
-    ["story"],
+    ["story", "village"],
   );
   assert.equal(isGuardian(s), false);
   s.completed = ["path"];
-  assert.equal(earnedGuardianStamps(s).length, 1);
+  assert.equal(earnedGuardianStamps(s).length, 0);
   s.completed.push("trash");
   assert.equal(earnedGuardianStamps(s).length, 2);
   s.completed.push("lake");
+  s.journey.exhibitIds = ["work-1"];
   assert.equal(isGuardian(s), true);
   assert.equal(earnedGuardianStamps(s).length, 3);
   const restored = JSON.parse(JSON.stringify(s));
@@ -220,7 +224,7 @@ test("old records gain guardian defaults without inventing legend completion; te
   const old = initialState();
   delete old.guardian;
   old.completed = ["path", "trash", "lake"];
-  assert.equal(earnedGuardianStamps(old).length, 2);
+  assert.equal(earnedGuardianStamps(old).length, 0);
   assert.equal(hasReadLegend(old, defaultGuardianLegend), false);
   old.guardian = initialGuardian();
   assert.equal(old.guardian.legendQuizPassed, false);
@@ -232,4 +236,19 @@ test("old records gain guardian defaults without inventing legend completion; te
   const bad = structuredClone(defaultGuardianLegend);
   bad.pages[1].id = bad.pages[0].id;
   assert.throws(() => validateGuardianLesson(bad));
+});
+
+test("legend cannot award a stamp before the school and road levels even when dialogue IDs are already read", () => {
+  const s = initialState();
+  s.guardian.legendSeen = defaultGuardianLegend.pages.map((p) => p.id);
+  assert.equal(answerLegend(s, defaultGuardianLegend, 0), "locked");
+  assert.equal(s.guardian.legendQuizPassed, false);
+});
+
+test("legend content cannot be completed without meeting the turtle friend after road level", () => {
+  const s = initialState();
+  s.journey.schoolReady = true;
+  s.completed = ["path", "trash"];
+  s.guardian.legendSeen = defaultGuardianLegend.pages.map((p) => p.id);
+  assert.equal(answerLegend(s, defaultGuardianLegend, 0), "locked");
 });

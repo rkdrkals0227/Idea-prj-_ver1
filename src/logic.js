@@ -1,7 +1,9 @@
+import { initialJourney } from "./journey.js";
 import { initialGuardian } from "./guardian.js";
 export function initialState() {
   return {
     version: 1,
+    journey: initialJourney(),
     guardian: initialGuardian(),
     started: [],
     completed: [],

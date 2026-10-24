@@ -1,3 +1,4 @@
+import { canEnterLevel } from "./journey.js";
 import { guardianStamps } from "./data/guardian.js";
 export function initialGuardian() {
   return { legendSeen: [], legendQuizPassed: false, introSeen: false };
@@ -5,10 +6,17 @@ export function initialGuardian() {
 export function normalizeGuardian(value) {
   return { ...initialGuardian(), ...value };
 }
+export function canHearLegend(state) {
+  return (
+    canEnterLevel(state, 3) &&
+    (state.journey.met.includes("turtle") || state.guardian?.legendQuizPassed)
+  );
+}
 export function hasReadLegend(state, lesson) {
   return lesson.pages.every((p) => state.guardian?.legendSeen.includes(p.id));
 }
 export function readLegendPage(state, lesson, id) {
+  if (!canHearLegend(state)) return false;
   const i = lesson.pages.findIndex((p) => p.id === id);
   if (
     i < 0 ||
@@ -23,7 +31,7 @@ export function readLegendPage(state, lesson, id) {
   return true;
 }
 export function answerLegend(state, lesson, choice) {
-  if (!hasReadLegend(state, lesson)) return "locked";
+  if (!canHearLegend(state) || !hasReadLegend(state, lesson)) return "locked";
   if (choice !== lesson.quiz.answer) return "wrong";
   state.guardian = normalizeGuardian(state.guardian);
   if (state.guardian.legendQuizPassed) return "already";
@@ -32,10 +40,12 @@ export function answerLegend(state, lesson, choice) {
 }
 export function earnedGuardianStamps(state) {
   const conditions = {
-    story: !!state.guardian?.legendQuizPassed,
+    story: canEnterLevel(state, 3) && !!state.guardian?.legendQuizPassed,
     village:
-      state.completed.includes("path") && state.completed.includes("trash"),
-    ecology: state.completed.includes("lake"),
+      canEnterLevel(state, 2) &&
+      state.completed.includes("path") &&
+      state.completed.includes("trash"),
+    ecology: canEnterLevel(state, 4) && !!state.journey?.exhibitIds.length,
   };
   return guardianStamps.filter((s) => conditions[s.id]);
 }

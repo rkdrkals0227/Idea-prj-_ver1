@@ -308,6 +308,7 @@ export const defaults = {
   },
 };
 export const habitats = {
+  river: { name: "남강 생태 전시", x: -14, z: 10, r: 2 },
   lake: { name: "호숫가", x: 18, z: -8, r: 2 },
   forest: { name: "숲", x: -18, z: -14, r: 3 },
   grass: { name: "풀밭", x: -14, z: 10, r: 3 },

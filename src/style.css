@@ -886,3 +886,116 @@ a {
     padding: 17px;
   }
 }
+.level-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  border-bottom: 1px dashed #d6ddc9;
+  border-radius: 10px;
+  text-align: left;
+  padding: 10px 6px;
+  font-size: 0.76rem;
+  background: transparent;
+  line-height: 1.5;
+  min-height: 53px;
+}
+.level-row > span {
+  border: 1px solid #b5c4a0;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.level-row small {
+  display: block;
+  font-size: 0.65rem;
+  color: #71826b;
+}
+.level-row.done > span {
+  background: #638561;
+  color: #fff;
+}
+.level-row.current {
+  background: #edf1d5;
+  outline: 2px solid #ceb56e;
+  animation: current-goal 2s ease-in-out infinite;
+}
+#level-goal {
+  font-size: 0.73rem;
+  line-height: 1.65;
+  margin-bottom: 9px;
+}
+@keyframes current-goal {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 #e4bd6440;
+  }
+  50% {
+    box-shadow: 0 0 15px 3px #e4bd6470;
+  }
+}
+.reduce-motion .level-row.current {
+  animation: none;
+  box-shadow: 0 0 0 2px #d4b86f;
+}
+.weekly-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+  margin: 22px 0;
+}
+.weekly-grid article {
+  background: #edf1e1;
+  border-radius: 12px;
+  padding: 10px 7px;
+  min-width: 0;
+  font-size: 0.75rem;
+  text-align: center;
+}
+.weekly-grid small,
+.weekly-grid span {
+  display: block;
+  margin: 5px 0;
+}
+.weekly-grid p {
+  font-size: 0.7rem;
+  word-break: break-word;
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .weekly-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .level-row {
+    font-size: 0.68rem;
+    padding: 7px 4px;
+    min-height: 47px;
+  }
+  .level-row small {
+    font-size: 0.6rem;
+  }
+  #level-goal {
+    font-size: 0.65rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .level-row.current {
+    animation: none;
+  }
+}
+.map-pledge {
+  display: block;
+  font-weight: 400;
+  font-size: 0.8rem;
+  margin-top: 5px;
+  color: #637a60;
+}

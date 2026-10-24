@@ -1,7 +1,21 @@
+import {
+  levels,
+  journeyLevel,
+  canEnterLevel,
+  normalizeJourney,
+  validateJourney,
+  objective,
+  registerExhibit,
+  reconcileExhibits,
+  validExhibit,
+} from "./journey.js";
+import { showSchool } from "./school.js";
+import { residentIntroductions } from "./data/residents.js";
 import { guardianStamps } from "./data/guardian.js";
 import {
   normalizeGuardian,
   hasReadLegend,
+  canHearLegend,
   readLegendPage,
   answerLegend,
   earnedGuardianStamps,
@@ -52,7 +66,7 @@ let state,
 let tracked = null;
 let criticalUntil = 0;
 const app = $("#app");
-app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day">맑은 낮 · 개인 체험</span></div></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">TODAY'S ADVENTURE</span><h2>마을에 작은 변화를 🌱</h2><div id="quests"></div><div class="counter"><span>우리 동네 수호대 스탬프</span><b id="badge-count">0 / 3</b></div><div class="progress"><i id="progress"></i></div><div id="guardian-stamps" class="stamp-strip"></div><button id="guardian-open" class="guardian-open">스탬프 3개 모으기 · 미션 안내</button></section><nav class="sidebar" aria-label="탐험 도구"><button class="nav-btn" data-page="map"><span>⌘</span>마을 지도</button><button class="nav-btn" id="camera"><span>▣</span>그림 등록</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="catalog"><span>▤</span>생태 도감</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="마을 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
+app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day">맑은 낮 · 개인 체험</span></div></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">OUR VILLAGE JOURNEY</span><h2 id="level-title">레벨 1 · 학교</h2><p id="level-goal" class="small"></p><div id="quests"></div><div class="counter"><span>우리 동네 수호대 스탬프</span><b id="badge-count">0 / 3</b></div><div class="progress"><i id="progress"></i></div><div id="guardian-stamps" class="stamp-strip"></div><button id="guardian-open" class="guardian-open">스탬프 3개 모으기 · 미션 안내</button></section><nav class="sidebar" aria-label="탐험 도구"><button class="nav-btn" data-page="map"><span>⌘</span>마을 지도</button><button class="nav-btn" id="camera"><span>▣</span>그림 등록</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="catalog"><span>▤</span>생태 도감</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="마을 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
 function toast(message, critical = false) {
   if (!critical && Date.now() < criticalUntil) return;
   if (critical) criticalUntil = Date.now() + 8000;
@@ -122,13 +136,24 @@ function persist() {
   renderHud();
 }
 function renderHud() {
-  const ids = Object.keys(content.quests);
-  $("#quests").innerHTML = ids
+  const current = journeyLevel(state);
+  $("#level-title").textContent =
+    current > 4
+      ? "우리 동네 수호대 · 성공!"
+      : `레벨 ${current} · ${levels[current - 1].title.split(" · ")[0]}`;
+  $("#level-goal").textContent =
+    current > 4
+      ? "전시한 약속을 생활에서도 이어가요."
+      : levels[current - 1].description;
+  $("#quests").innerHTML = levels
     .map(
-      (id) =>
-        `<div class="quest-row ${state.completed.includes(id) ? "done" : ""}" role="button" tabindex="0" data-quest="${h(id)}"><span class="status-dot">${state.completed.includes(id) ? "✓" : "○"}</span><div>${h(content.quests[id].title)}<div class="summary-count">${state.completed.includes(id) ? "완료했어요" : state.started.includes(id) ? "진행 중" : "학교에서 시작해요"}</div></div></div>`,
+      (l) =>
+        `<button class="level-row ${l.id === current ? "current" : ""} ${l.id < current ? "done" : ""}" data-level="${l.id}" aria-label="레벨 ${l.id} ${h(l.title)} ${l.id < current ? "완료" : l.id === current ? "진행 중" : "잠김"}"><span>${l.id < current ? "✓" : l.id > current ? "♙" : l.id}</span><div>${h(l.title)}<small>${l.id < current ? "완료" : l.id === current ? "지금 할 일" : "앞 레벨을 마치면 열려요"}</small></div></button>`,
     )
     .join("");
+  document
+    .querySelectorAll("[data-level]")
+    .forEach((b) => (b.onclick = () => levelAction(+b.dataset.level)));
   const earned = earnedGuardianStamps(state),
     idsEarned = earned.map((s) => s.id);
   $("#badge-count").textContent = `${earned.length} / 3`;
@@ -143,20 +168,46 @@ function renderHud() {
     ? "수호대 성공! 인증서 보기"
     : "스탬프 3개 모으기 · 미션 안내";
   $("#guardian-open").onclick = guardianOverview;
-  document.querySelectorAll("[data-quest]").forEach((b) => {
-    b.onclick = () => questInfo(b.dataset.quest);
-    b.onkeydown = (e) => {
-      if (e.key === "Enter") b.click();
-    };
-  });
+  world?.setObjective?.(objective(state, content, world.indoor));
 }
+function levelGate(n) {
+  if (canEnterLevel(state, n)) return true;
+  const active = journeyLevel(state),
+    root = open(
+      `레벨 ${n}은 아직 잠겨 있어요`,
+      `<p>먼저 <b>레벨 ${active} · ${h(levels[active - 1].title)}</b>을 마치고 와 줘!</p><p>${h(levels[active - 1].description)}</p><button id="current-level" class="primary">지금 할 일 확인</button>`,
+    );
+  root.querySelector("#current-level").onclick = guardianOverview;
+  return false;
+}
+function levelAction(n) {
+  if (!levelGate(n)) return;
+  if (n === 1) {
+    if (world?.indoor === "school" || state.journey.schoolReady) return board();
+    close();
+    toast("학교 입구의 빛을 따라가서 회의 게시판을 살펴보세요.");
+  } else if (n === 2) {
+    const r = open(
+      "레벨 2 · 통학로 문제 해결",
+      '<p>안내 길과 주택가를 모두 돌보면 레벨 3이 열려요.</p><div class="stack"><button id="road-path">안내 길 수리</button><button id="road-trash">주택가 쓰레기 분류</button></div>',
+    );
+    r.querySelector("#road-path").onclick = () => questInfo("path");
+    r.querySelector("#road-trash").onclick = () => questInfo("trash");
+  } else if (n === 3) {
+    close();
+    toast("금호지의 빛을 따라 동물 친구에게 말을 걸어 보세요.");
+  } else showExhibition();
+}
+
 function start(id) {
+  if (!levelGate(id === "lake" ? 3 : 2)) return;
   startQuest(state, id);
   persist();
   toast("활동을 시작했어요. 지도에서 위치를 찾아보세요.");
 }
 const targets = { path: [-6, 4.7], trash: [16, 9], lake: [19, -11] };
 function questInfo(id) {
+  if (!levelGate(id === "lake" ? 3 : 2)) return;
   const q = content.quests[id];
   const root = open(
     q.title,
@@ -172,30 +223,19 @@ function questInfo(id) {
   };
 }
 function board() {
-  const root = open(
-    "우리 학급 회의 결과",
-    `<span class="badge">예시 회의 결과</span><h3>${h(content.className)} · ${h(content.topic)}</h3><p class="small">회의 날짜: ${h(content.meetingDate)}<br>역할 분담: ${h(content.meeting.roles)}<br>함께 지킬 약속: ${h(content.meeting.promise)}<br>활동 기간: ${h(content.meeting.period)}</p><div class="stack">${content.agendas.map((a, i) => `<button data-agenda="${i}">${h(a.title)} <span aria-hidden="true">↗</span></button>`).join("")}</div><div class="actions"><button id="reflect">활동 돌아보기</button><button id="teacher">교사용 편집</button></div>`,
-  );
-  root.querySelectorAll("[data-agenda]").forEach(
-    (b) =>
-      (b.onclick = () => {
-        const a = content.agendas[+b.dataset.agenda];
-        const r = open(
-          a.title,
-          `<h3>우리가 발견한 문제</h3><p>${h(a.problem)}</p><h3>함께 정한 실천</h3><p>${h(a.action)}</p><div class="actions"><button id="map">지도 위치</button><button class="primary" id="go">이 활동 해 보기</button></div>`,
-        );
-        r.querySelector("#map").onclick = () => {
-          tracked = a.quest;
-          showMap();
-        };
-        r.querySelector("#go").onclick = () => {
-          start(a.quest);
-          close();
-        };
-      }),
-  );
-  root.querySelector("#reflect").onclick = reflection;
-  root.querySelector("#teacher").onclick = teacher;
+  showSchool({
+    state,
+    content,
+    ui,
+    persist,
+    onNext: () => {
+      close();
+      if (world.indoor) world.exit();
+      persist();
+    },
+    reflection,
+    teacher,
+  });
 }
 function reflection() {
   const root = open(
@@ -213,7 +253,28 @@ function reflection() {
     reflection();
   };
 }
-function talk(id) {
+function introduce(key, next) {
+  if (state.journey.met.includes(key)) {
+    next();
+    return;
+  }
+  const who = residentIntroductions[key],
+    d = content.dialogues[key];
+  const r = open(
+    "동물 친구와 첫 만남",
+    `<p>안녕, 나는 <b>${h(who.name)}</b>이야.</p><p>${h(d?.intro || who.text)}</p><p class="small">가상의 주민을 소개하는 게임 설정이에요. 실제 서식 정보와는 구분해요.</p><button id="intro-next" class="primary">반가워! 이야기 나누기</button>`,
+  );
+  r.querySelector("#intro-next").onclick = () => {
+    if (!state.journey.met.includes(key)) state.journey.met.push(key);
+    persist();
+    close();
+    next();
+  };
+}
+function talk(id, introduced = false) {
+  if (!levelGate(3)) return;
+  const introKey = id === "resident" ? "house" : id;
+  if (!introduced) return introduce(introKey, () => talk(id, true));
   const key = id === "resident" ? "house" : id,
     d = content.dialogues[key],
     qid = { otter: "path", turtle: "lake", house: "trash" }[key],
@@ -256,6 +317,7 @@ function talk(id) {
   root.querySelector("#bye").onclick = close;
 }
 function quiz(context, requestedId = null) {
+  if (!levelGate(["path", "apartment"].includes(context) ? 2 : 3)) return;
   const list = quizPool(content, context);
   const topic =
     quizContextLabels[context] ||
@@ -311,6 +373,7 @@ function quiz(context, requestedId = null) {
   );
 }
 function placeStory(id) {
+  if (!levelGate(id === "apartment" ? 2 : 3)) return;
   const text =
     id === "forest"
       ? "이 숲길에서는 작은 싹과 새소리를 찾아보자. 정해진 길에서 조용히 관찰하고, 본 것과 추측한 것을 나누어 기록해 봐."
@@ -330,6 +393,7 @@ function safeUrl(url) {
   }
 }
 function books() {
+  if (!levelGate(3)) return;
   const cards = approved(content.sources);
   const root = open(
     "작은 도서관 · 책장",
@@ -370,6 +434,7 @@ function books() {
   root.querySelector("#quiz").onclick = () => quiz("library");
 }
 function pathPuzzle() {
+  if (!levelGate(2)) return;
   if (state.path) {
     toast("안내 길을 완성했어요! 길을 막지 않는 약속을 기억해요.");
     return;
@@ -429,6 +494,7 @@ function pathPuzzle() {
 function pickup(id) {
   const item = content.waste.find((w) => w.id === id);
   if (!item) return;
+  if (!levelGate(item.zone === "lake" ? 3 : 2)) return;
   if (collect(state, id)) {
     startQuest(state, item.zone === "lake" ? "lake" : "trash");
     persist();
@@ -447,6 +513,7 @@ function bag() {
   root.querySelector("#guardian-bag").onclick = guardianOverview;
 }
 function bins() {
+  if (!levelGate(2)) return;
   const items = state.collected
       .map((id) => content.waste.find((w) => w.id === id))
       .filter(Boolean),
@@ -471,6 +538,7 @@ function bins() {
   );
 }
 function lakeAction(id) {
+  if (!levelGate(3)) return;
   startQuest(state, "lake");
   if (id === "rest") {
     if (!state.lake.rest) {
@@ -521,6 +589,7 @@ function letterText(d) {
   return `${d.recipient || "주민"}에게\n\n[${d.type || "문제 해결 제안"}]\n발견한 문제와 장소: ${d.problem || ""}\n주민이 겪는 어려움: ${d.difficulty || ""}\n내가 제안하는 해결 방법: ${d.proposal || ""}\n함께 실천할 약속: ${d.promise || ""}\n\n${d.free || ""}\n\n보내는 사람: ${d.alias || "탐험가"}\n\n※ 게임 속 편지입니다. 실제 기관 발송 전 교사 확인이 필요한 초안입니다.`;
 }
 function letter() {
+  if (!levelGate(3)) return;
   const d = state.letterDraft;
   const root = open(
     "솔솔 우체국 · 마음을 전해요",
@@ -608,6 +677,7 @@ function previewLetter(d, received = false) {
   }
 }
 const places = [
+  { id: "exhibition", name: "남강 전시", x: -14, z: 10 },
   { id: "school", name: "학교", x: -10, z: -5 },
   { id: "library", name: "도서관", x: 1, z: -10 },
   { id: "apartment", name: "아파트", x: 14, z: -1 },
@@ -675,8 +745,9 @@ function drawMap(canvas, large = false) {
   }
   for (const id of Object.keys(targets)) {
     if (
-      (state.started.includes(id) && !state.completed.includes(id)) ||
-      tracked === id
+      canEnterLevel(state, id === "lake" ? 3 : 2) &&
+      ((state.started.includes(id) && !state.completed.includes(id)) ||
+        tracked === id)
     ) {
       const [px, pz] = targets[id];
       ctx.strokeStyle = "#b17a42";
@@ -690,6 +761,14 @@ function drawMap(canvas, large = false) {
         ctx.fillText("활동 중", x(px), z(pz) - 20);
       }
     }
+  }
+  const active = objective(state, content, world?.indoor);
+  if (active) {
+    ctx.strokeStyle = "#d69b35";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x(active.x), z(active.z), large ? 18 : 8, 0, 7);
+    ctx.stroke();
   }
   const p = world?.player.position || { x: -10, z: 1 };
   ctx.fillStyle = "#355e4e";
@@ -712,7 +791,7 @@ function hash(str) {
 function showMap(focusId) {
   const root = open(
     "우리 마을 탐험 지도",
-    `<p class="small">실제 금산면을 모티브로 수업 동선에 맞게 줄인 축약 지도예요. 실제 길 찾기용 지도가 아니에요.</p><canvas id="large-map" class="map-large" width="820" height="550" aria-label="마을과 작품의 위치"></canvas><div class="legend"><span>● 초록: 나</span><span>● 갈색: 학생 작품</span><span>◎ 활동 중인 곳</span></div>${tracked ? `<p class="notice">찾아갈 곳: ${h(content.quests[tracked]?.title || "활동 위치")}</p>` : ""}<h3>우리 반의 관찰 지도</h3><div class="stack">${works.map((a) => `<button data-art="${h(a.id)}">♧ ${h(a.name)} · ${habitats[a.habitat].name}${a.id === focusId ? " ← 선택한 작품" : ""}</button>`).join("") || '<p class="small">사진기에서 그림을 등록하면 이 지도에도 나타나요.</p>'}</div>`,
+    `<p class="small">실제 금산면을 모티브로 수업 동선에 맞게 줄인 축약 지도예요. 실제 길 찾기용 지도가 아니에요.</p><canvas id="large-map" class="map-large" width="820" height="550" aria-label="마을과 작품의 위치"></canvas><div class="legend"><span>● 초록: 나</span><span>● 갈색: 학생 작품</span><span>◎ 활동 중인 곳</span></div>${tracked ? `<p class="notice">찾아갈 곳: ${h(content.quests[tracked]?.title || "활동 위치")}</p>` : ""}<h3>우리 반의 관찰 지도</h3><div class="stack">${works.map((a) => `<button data-art="${h(a.id)}">♧ ${h(a.name)} · ${habitats[a.habitat].name}${a.id === focusId ? " ← 선택한 작품" : ""}<small class="map-pledge">${h(a.protection || "보호 약속을 추가해 주세요.")}</small></button>`).join("") || '<p class="small">사진기에서 그림을 등록하면 이 지도에도 나타나요.</p>'}</div>`,
     "wide",
   );
   drawMap(root.querySelector("canvas"), true);
@@ -726,8 +805,17 @@ function showMap(focusId) {
     button?.focus();
   }
 }
+async function saveExhibitWork(work) {
+  if (!canEnterLevel(state, 4) || !validExhibit(work))
+    throw new Error("이름과 보호 약속을 확인해 주세요.");
+  await artStore.put(work);
+  registerExhibit(state, work);
+  await refreshWorks();
+}
 async function refreshWorks() {
   works = await artStore.all();
+  reconcileExhibits(state, works);
+  persist();
   await world?.setArt(works, state.settings);
 }
 async function catalog() {
@@ -741,7 +829,7 @@ async function catalog() {
     const card = document.createElement("article");
     card.className = "card";
     const u = URL.createObjectURL(a.blob);
-    card.innerHTML = `<img class="art-thumb" alt="${h(a.name)}"><h3>${h(a.name)}</h3><p class="small">${h(a.alias || "탐험가")} · ${habitats[a.habitat].name}</p><button>작품 살펴보기</button>`;
+    card.innerHTML = `<img class="art-thumb" alt="${h(a.name)}"><h3>${h(a.name)}</h3><p class="small">${h(a.alias || "탐험가")} · ${habitats[a.habitat].name}</p><p>${h(a.protection || "보호 약속을 추가해 주세요.")}</p><button>작품 살펴보기</button>`;
     const img = card.querySelector("img");
     img.onload = () => URL.revokeObjectURL(u);
     img.onerror = () => URL.revokeObjectURL(u);
@@ -752,7 +840,7 @@ async function catalog() {
   if (!works.length)
     list.innerHTML =
       '<div class="card"><h3>첫 번째 생태 친구를 기다려요</h3><p>종이에 그린 그림을 사진으로 찍거나, 저장한 그림을 골라 보세요.</p></div>';
-  root.querySelector("#new").onclick = () => $("#image-input").click();
+  root.querySelector("#new").onclick = chooseImage;
   root.querySelector("#export").onclick = async () => {
     try {
       download(
@@ -763,7 +851,8 @@ async function catalog() {
       toast("작품 내보내기를 완료하지 못했어요. 다시 시도해 주세요.");
     }
   };
-  root.querySelector("#import").onclick = () =>
+  root.querySelector("#import").onclick = () => {
+    if (!levelGate(4)) return;
     chooseJSON(async (data) => {
       const incoming = await decodeBundle(data);
       await artStore.putMany(incoming);
@@ -773,13 +862,14 @@ async function catalog() {
         "같은 작품 ID는 새 자료로 갱신했어요. 개인 편지와 소감은 공유하지 않아요.",
       );
     });
+  };
 }
 function artDetail(id) {
   const a = works.find((a) => a.id === id);
   if (!a) return;
   const root = open(
     a.name,
-    `<span class="badge">학생 관찰·표현 작품</span><img id="detail-image" class="art-thumb" style="height:220px" alt="${h(a.name)}"><p>만든 이: ${h(a.alias || "탐험가")}<br>관찰 장소: ${h(a.observed || "미입력")}<br>서식 구역: ${habitats[a.habitat].name}</p><p>${h(a.description || "아직 설명이 없어요.")}</p><div class="actions"><button id="map">지도 위치</button><button id="edit">이름·설명·위치 수정</button><button id="delete">작품 삭제</button></div>`,
+    `<span class="badge">학생 관찰·표현 작품</span><img id="detail-image" class="art-thumb" style="height:220px" alt="${h(a.name)}"><p>만든 이: ${h(a.alias || "탐험가")}<br>관찰 장소: ${h(a.observed || "미입력")}<br>서식 구역: ${habitats[a.habitat].name}</p><p>${h(a.description || "아직 설명이 없어요.")}</p><div class="notice"><b>나의 보호 약속</b><p>${h(a.protection || "아직 적지 않았어요. 레벨 4에서 보호 약속을 붙여 전시할 수 있어요.")}</p></div><div class="actions"><button id="map">지도 위치</button><button id="edit">이름·설명·위치 수정</button><button id="delete">작품 삭제</button></div>`,
   );
   const u = URL.createObjectURL(a.blob),
     img = root.querySelector("#detail-image");
@@ -806,6 +896,7 @@ function artDetail(id) {
   };
 }
 function editArt(a) {
+  if (!levelGate(4)) return;
   const root = open(
     "작품 기록 고치기",
     `<form>${[
@@ -813,10 +904,11 @@ function editArt(a) {
       ["alias", "별명 또는 작품 이름"],
       ["description", "생태 설명"],
       ["observed", "관찰 장소"],
+      ["protection", "내가 이 친구를 지키기 위해 할 수 있는 일"],
     ]
       .map(
         ([k, t]) =>
-          `<label>${t}<input name="${k}" value="${h(a[k])}" maxlength="${k === "description" ? 500 : 100}" ${k === "name" ? "required" : ""}></label>`,
+          `<label>${t}<input name="${k}" value="${h(a[k])}" maxlength="${["description", "protection"].includes(k) ? 500 : 100}" ${["name", "protection"].includes(k) ? "required" : ""}></label>`,
       )
       .join("")}<label>서식 구역<select name="habitat">${Object.entries(
       habitats,
@@ -832,12 +924,17 @@ function editArt(a) {
   root.querySelector("form").onsubmit = async (e) => {
     e.preventDefault();
     try {
-      await artStore.put({
+      const values = Object.fromEntries(new FormData(e.target));
+      if (!values.name.trim() || !values.protection.trim()) {
+        toast("이름과 보호 약속을 적어 주세요.");
+        return;
+      }
+      await saveExhibitWork({
         ...a,
-        ...Object.fromEntries(new FormData(e.target)),
+        ...values,
+        exhibition: "namgang",
         updatedAt: Date.now(),
       });
-      await refreshWorks();
       artDetail(a.id);
       toast("마을·지도·도감에 함께 반영했어요.");
     } catch {
@@ -1146,6 +1243,7 @@ function settings() {
             ...initialState(),
             ...b.state,
             guardian: normalizeGuardian(b.state.guardian),
+            journey: normalizeJourney(b.state.journey),
             settings: { ...initialState().settings, ...b.state.settings },
           };
           saveContent(content);
@@ -1161,6 +1259,7 @@ function settings() {
     });
 }
 function validateState(s) {
+  if (s.journey !== undefined) validateJourney(s.journey);
   if (s.guardian !== undefined) validateGuardian(s.guardian);
   for (const k of [
     "started",
@@ -1189,6 +1288,10 @@ let audio = null,
   audioTimer = null,
   note = 0;
 function applySettings() {
+  document.documentElement.classList.toggle(
+    "reduce-motion",
+    !!state.settings.motion,
+  );
   document.documentElement.style.fontSize = `${16 * state.settings.font}px`;
   world?.configure(state.settings);
   clearInterval(audioTimer);
@@ -1222,32 +1325,50 @@ function applySettings() {
   }
 }
 function guardianOverview() {
-  const earned = earnedGuardianStamps(state).map((s) => s.id),
-    done = isGuardian(state);
-  const root = open(
-    done ? "우리 동네 수호대 · 미션 성공!" : "우리 동네 수호대 · 스탬프 모으기",
-    `
-    <div class="guardian-summary ${done ? "complete" : ""}"><span class="welcome-icon">${done ? "✧" : "♧"}</span><h3>${done ? "축하해요! 우리 동네 수호대가 되었어요." : "세 가지 스탬프를 모두 모으면 미션 성공!"}</h3><p>${earned.length} / 3 스탬프 · ${done ? "이야기를 기억하고, 이웃을 배려하고, 자연을 돌봤어요." : "같은 활동을 반복해도 같은 스탬프가 늘어나지는 않아요."}</p></div>
-    <div class="cards">${guardianStamps.map((s) => `<article class="card guardian-card"><span class="stamp-seal ${earned.includes(s.id) ? "earned" : ""}">${s.icon}</span><h3>${h(s.name)}</h3><span class="badge">${earned.includes(s.id) ? "✓ 획득 완료" : "○ 도전 중"}</span><p>${h(s.description)}</p><p class="small">${h(s.location)}</p><button data-stamp="${s.id}">${s.id === "story" ? "금호지 이야기 듣기" : "관련 활동 보기"}</button></article>`).join("")}</div>`,
+  const current = journeyLevel(state),
+    earned = earnedGuardianStamps(state).map((s) => s.id),
+    r = open(
+      current === 5
+        ? "우리 동네 수호대 · 미션 성공!"
+        : "레벨 1부터 차례로 · 우리 동네 수호대",
+      `<div class="guardian-summary ${current === 5 ? "complete" : ""}"><h3>${current === 5 ? "축하해요! 네 레벨을 마치고 우리 동네 수호대가 되었어요." : `지금은 레벨 ${current}이에요. 빛나는 곳부터 시작해요.`}</h3><p>마을 · 이야기 · 생태 스탬프 ${earned.length} / 3</p></div><div class="cards">${levels.map((l) => `<article class="card"><span class="badge">레벨 ${l.id} · ${l.id < current ? "✓ 완료" : l.id === current ? "지금 도전" : "잠김"}</span><h3>${h(l.title)}</h3><p>${h(l.description)}</p><button data-stage="${l.id}">${l.id > current ? "앞 레벨부터 완료해 주세요" : "활동 확인하기"}</button></article>`).join("")}</div><div class="stamp-strip">${guardianStamps.map((s) => `<span class="badge">${earned.includes(s.id) ? "✓" : "○"} ${h(s.name)}</span>`).join("")}</div>${state.journey.briefingRead ? '<button id="weekly-again">이번 주 실천 체크 이어 쓰기</button>' : ""}`,
+      "wide",
+    );
+  r.querySelectorAll("[data-stage]").forEach(
+    (b) => (b.onclick = () => levelAction(+b.dataset.stage)),
+  );
+  r.querySelector("#weekly-again")?.addEventListener("click", board);
+}
+function chooseImage() {
+  if (levelGate(4)) $("#image-input").click();
+}
+function showExhibition() {
+  if (!levelGate(4)) return;
+  const shown = works.filter((w) => w.exhibition === "namgang");
+  const r = open(
+    "레벨 4 · 남강 생태 지도 전시",
+    `<p>그림에 생물 이름과 <b>내가 지키기 위해 노력할 일</b>을 적어 전시해요. 남강을 모티브로 만든 수업용 전시 공간이에요.</p><div class="actions"><button id="exhibit-upload" class="primary">그림 올리고 이름·보호 약속 적기</button><button id="exhibit-catalog">전시 작품 도감</button></div><div class="cards">${shown.map((w) => `<article class="card"><h3>${h(w.name)}</h3><p>${h(w.protection || "보호 약속을 더해 주세요.")}</p><button data-exhibit="${h(w.id)}">작품과 약속 보기</button></article>`).join("") || '<article class="card"><h3>첫 생태 작품을 기다려요</h3><p>가져온 작품은 보호 약속을 확인하고 수정·저장하여 내 전시에 등록할 수 있어요.</p></article>'}</div>`,
     "wide",
   );
-  root.querySelectorAll("[data-stamp]").forEach(
-    (b) =>
-      (b.onclick = () => {
-        if (b.dataset.stamp === "story") legendDialogue();
-        else if (b.dataset.stamp === "ecology") questInfo("lake");
-        else {
-          const r = open(
-            "마을 수호대 · 두 가지 실천",
-            '<p>안내 길과 주택가를 모두 돌보면 마을 스탬프를 받아요.</p><div class="stack"><button id="path">안내 길 수리</button><button id="trash">주택가 쓰레기 분류</button></div>',
-          );
-          r.querySelector("#path").onclick = () => questInfo("path");
-          r.querySelector("#trash").onclick = () => questInfo("trash");
-        }
-      }),
+  r.querySelector("#exhibit-upload").onclick = chooseImage;
+  r.querySelector("#exhibit-catalog").onclick = catalog;
+  r.querySelectorAll("[data-exhibit]").forEach(
+    (b) => (b.onclick = () => artDetail(b.dataset.exhibit)),
   );
 }
 function legendDialogue(index = null) {
+  if (!levelGate(3)) return;
+  if (!canHearLegend(state)) {
+    const r = open(
+      "금호지의 동물 친구를 먼저 만나요",
+      '<p>금호지에서 동물 친구와 먼저 인사한 뒤 전설을 들어 보세요. 빛나는 곳을 따라가면 친구를 만날 수 있어요.</p><button id="meet-first" class="primary">금호지 친구 찾아가기</button>',
+    );
+    r.querySelector("#meet-first").onclick = () => {
+      close();
+      toast("금호지의 빛나는 곳에서 동물 친구에게 E키로 인사해 보세요.");
+    };
+    return;
+  }
   const lesson = content.guardianLegend;
   let current =
     index ??
@@ -1276,6 +1397,11 @@ function legendDialogue(index = null) {
   root.querySelector("#legend-quiz").onclick = legendQuiz;
 }
 function legendQuiz() {
+  if (!levelGate(3)) return;
+  if (!canHearLegend(state)) {
+    legendDialogue();
+    return;
+  }
   const lesson = content.guardianLegend;
   if (!hasReadLegend(state, lesson)) {
     toast("금호지 이야기를 끝까지 읽은 뒤 퀴즈에 도전해 주세요.");
@@ -1323,11 +1449,12 @@ function legendReward(fresh) {
 function welcome() {
   const root = open(
     "금산마을에 오신 걸 환영해요",
-    `<div class="welcome-banner"><span class="eyebrow">OUR LITTLE VILLAGE, OUR BIG DISCOVERIES</span><h2 class="welcome-title">스탬프 3개를 모아<br>우리 동네 수호대가 되자!</h2><p>이야기·마을·생태 스탬프를 <b>하나씩, 모두 3개</b> 모으면 미션 성공!<br>우리 동네를 알고 돌보는 수호대가 될 수 있어요.</p><ol class="guardian-intro"><li><b>이야기 스탬프</b> — 금호지 전설을 끝까지 듣고 퀴즈 맞히기</li><li><b>마을 스탬프</b> — 안내 길 수리와 주택가 정리 완료하기</li><li><b>생태 스탬프</b> — 금호지 호수 돌봄 완료하기</li></ol></div><p class="small">진주시 금산면의 장소 이름을 빌려 수업 동선에 맞게 만든 <b>축약 지도</b>예요. 주민은 가상의 인물이며 실제 동물 서식의 증거가 아니에요. 학교·회의 결과는 예시입니다.</p><p class="notice">처음에는 바로 뒤의 학교 문에서 <b>E키</b>를 눌러 들어가 보세요. 기록과 그림은 이 브라우저에만 저장돼요. 별도 계정·유료 API가 필요하지 않아요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`,
+    `<div class="welcome-banner"><span class="eyebrow">OUR LITTLE VILLAGE, OUR BIG DISCOVERIES</span><h2 class="welcome-title">레벨 1부터 차례로!<br>우리 동네 수호대가 되자!</h2><p>학교 → 통학로 → 금호지 → 남강 전시, <b>네 레벨을 순서대로</b> 도전해요. 스탬프 3개를 모으면 미션 성공!<br>우리 동네를 알고 돌보는 수호대가 될 수 있어요.</p><ol class="guardian-intro"><li><b>레벨 1 · 학교</b> — 회의 결과 확인, 내 약속과 이번 주 실천 체크</li><li><b>레벨 2 · 통학로</b> — 안내 길과 주택가 문제 해결 · 마을 스탬프</li><li><b>레벨 3 · 금호지</b> — 동물 친구의 전설 대화와 퀴즈 · 이야기 스탬프</li><li><b>레벨 4 · 남강 생태 전시</b> — 내 그림·이름·보호 약속 전시 · 생태 스탬프</li></ol></div><p class="small">진주시 금산면의 장소 이름을 빌려 수업 동선에 맞게 만든 <b>축약 지도</b>예요. 주민은 가상의 인물이며 실제 동물 서식의 증거가 아니에요. 학교·회의 결과는 예시입니다.</p><p class="notice">처음에는 바로 뒤의 학교 문에서 <b>E키</b>를 눌러 들어가 보세요. 기록과 그림은 이 브라우저에만 저장돼요. 별도 계정·유료 API가 필요하지 않아요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`,
   );
   root.querySelector("#start").onclick = () => {
     state.welcomed = true;
     state.guardian.introSeen = true;
+    state.journey.introSeen = true;
     persist();
     close();
   };
@@ -1339,11 +1466,13 @@ function interact(id) {
     case "school":
     case "library":
       world.enter(id);
+      world.setObjective?.(objective(state, content, world.indoor));
       $("#place").textContent =
         id === "school" ? "학교 · 우리 반 교실" : "도서관 · 이야기 책장";
       return;
     case "exit":
       world.exit();
+      world.setObjective?.(objective(state, content, world.indoor));
       $("#place").textContent = "학교 앞 산책길";
       return;
     case "board":
@@ -1370,8 +1499,13 @@ function interact(id) {
       return showMap();
     case "forest":
       return placeStory("forest");
+    case "exhibition":
+      return showExhibition();
     case "rest":
+      return lakeAction(id);
     case "manager":
+      if (!levelGate(3)) return;
+      return introduce("manager", () => lakeAction(id));
     case "specimen":
       return lakeAction(id);
   }
@@ -1380,14 +1514,13 @@ const pages = { map: showMap, bag, catalog, settings };
 document
   .querySelectorAll("[data-page]")
   .forEach((b) => (b.onclick = () => pages[b.dataset.page]()));
-$("#camera").onclick = () => $("#image-input").click();
+$("#camera").onclick = chooseImage;
 $("#image-input").onchange = async (e) => {
   const file = e.target.files[0];
   e.target.value = "";
-  if (file)
+  if (file && levelGate(4))
     await imageEditor(file, ui, async (a) => {
-      await artStore.put(a);
-      await refreshWorks();
+      await saveExhibitWork(a);
     });
 };
 document.querySelectorAll("[data-key]").forEach((b) => {
@@ -1434,21 +1567,23 @@ try {
     );
   }
   $("#loading").remove();
-  if (!state.welcomed || !state.guardian.introSeen) welcome();
+  if (!state.welcomed || !state.journey.introSeen) welcome();
   setInterval(() => {
     drawMap($("#mini"));
     if (!world.indoor) {
       const p = world.player.position;
       $("#place").textContent =
-        p.x > 15 && p.z < -5
-          ? "금호지 호숫가"
-          : p.x < -14 && p.z < 0
-            ? "월아산 숲길"
-            : p.x > 8
-              ? "햇살 주택가"
-              : p.z > 5
-                ? "마을 광장"
-                : "학교 앞 산책길";
+        p.x < -8 && p.z > 6
+          ? "남강 생태 전시"
+          : p.x > 15 && p.z < -5
+            ? "금호지 호숫가"
+            : p.x < -14 && p.z < 0
+              ? "월아산 숲길"
+              : p.x > 8
+                ? "햇살 주택가"
+                : p.z > 5
+                  ? "마을 광장"
+                  : "학교 앞 산책길";
     }
   }, 250);
 } catch (e) {
