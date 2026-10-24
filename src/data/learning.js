@@ -1,3 +1,4 @@
+import { defaultGuardianLegend } from "./guardian.js";
 // Context IDs are independent of model IDs and saved progress. No global fallback.
 export const quizContextLabels = {
   otter: "물결 · 강과 마을 문화",
@@ -334,6 +335,8 @@ export function quizPool(content, context) {
 // Upgrade old browser content once. Preserve teacher wording, review status and IDs.
 export function upgradeQuizContent(content) {
   const c = structuredClone(content);
+  if (c && typeof c === "object" && c.guardianLegend === undefined)
+    c.guardianLegend = structuredClone(defaultGuardianLegend);
   for (const [id, theme] of Object.entries(residentThemes)) {
     const d = c?.dialogues?.[id];
     if (d && d.story === theme.old) d.story = theme.text;

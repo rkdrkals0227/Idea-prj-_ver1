@@ -1,3 +1,4 @@
+import { normalizeGuardian } from "./guardian.js";
 import { initialState } from "./logic.js";
 const KEY = "geumsan-state-v1",
   CONTENT = "geumsan-content-v1";
@@ -12,6 +13,7 @@ export function loadState() {
       ? {
           ...initialState(),
           ...d,
+          guardian: normalizeGuardian(d.guardian),
           lake: { ...initialState().lake, ...d.lake },
           settings: { ...initialState().settings, ...d.settings },
         }

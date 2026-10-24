@@ -174,3 +174,62 @@ test("physical game keys accept Korean and IME events, with safe legacy fallback
   assert.equal(isTextEntry({ tagName: "DIV", isContentEditable: true }), true);
   assert.equal(isTextEntry({ tagName: "CANVAS" }), false);
 });
+
+import {
+  initialGuardian,
+  readLegendPage,
+  hasReadLegend,
+  answerLegend,
+  earnedGuardianStamps,
+  isGuardian,
+  validateGuardianLesson,
+} from "../src/guardian.js";
+import { defaultGuardianLegend } from "../src/data/guardian.js";
+test("guardian legend requires all sequential dialogue pages before quiz; wrong answers and repeats never add stamps", () => {
+  const s = initialState(),
+    lesson = defaultGuardianLegend;
+  assert.equal(answerLegend(s, lesson, 0), "locked");
+  assert.equal(readLegendPage(s, lesson, lesson.pages.at(-1).id), false);
+  assert.equal(readLegendPage(s, lesson, "unknown-page"), false);
+  assert.equal(hasReadLegend(s, lesson), false);
+  for (const p of lesson.pages)
+    assert.equal(readLegendPage(s, lesson, p.id), true);
+  readLegendPage(s, lesson, lesson.pages[0].id);
+  assert.equal(s.guardian.legendSeen.length, lesson.pages.length);
+  assert.equal(answerLegend(s, lesson, 1), "wrong");
+  assert.equal(earnedGuardianStamps(s).length, 0);
+  assert.equal(answerLegend(s, lesson, 0), "earned");
+  assert.equal(answerLegend(s, lesson, 0), "already");
+  assert.deepEqual(
+    earnedGuardianStamps(s).map((s) => s.id),
+    ["story"],
+  );
+  assert.equal(isGuardian(s), false);
+  s.completed = ["path"];
+  assert.equal(earnedGuardianStamps(s).length, 1);
+  s.completed.push("trash");
+  assert.equal(earnedGuardianStamps(s).length, 2);
+  s.completed.push("lake");
+  assert.equal(isGuardian(s), true);
+  assert.equal(earnedGuardianStamps(s).length, 3);
+  const restored = JSON.parse(JSON.stringify(s));
+  assert.equal(isGuardian(restored), true);
+  assert.equal(hasReadLegend(restored, lesson), true);
+});
+test("old records gain guardian defaults without inventing legend completion; teacher legend IDs and answers validate", () => {
+  const old = initialState();
+  delete old.guardian;
+  old.completed = ["path", "trash", "lake"];
+  assert.equal(earnedGuardianStamps(old).length, 2);
+  assert.equal(hasReadLegend(old, defaultGuardianLegend), false);
+  old.guardian = initialGuardian();
+  assert.equal(old.guardian.legendQuizPassed, false);
+  const c = structuredClone(defaults);
+  delete c.guardianLegend;
+  const upgraded = upgradeQuizContent(c);
+  assert.deepEqual(upgraded.guardianLegend, defaultGuardianLegend);
+  assert.doesNotThrow(() => validateGuardianLesson(defaultGuardianLegend));
+  const bad = structuredClone(defaultGuardianLegend);
+  bad.pages[1].id = bad.pages[0].id;
+  assert.throws(() => validateGuardianLesson(bad));
+});

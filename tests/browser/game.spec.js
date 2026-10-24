@@ -650,3 +650,130 @@ test("physical E and WASD work with Korean keyboard events without affecting tex
   await page.locator("#interact").click();
   await expect(page.locator("#place")).toContainText("교실");
 });
+
+test("guardian intro, sequential legend dialogue, quiz lock, stamp reward and reload restoration", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: /스탬프 3개를 모아/ }),
+  ).toBeVisible();
+  await expect(page.locator(".guardian-intro li")).toHaveCount(3);
+  await page.getByRole("button", { name: "탐험을 시작할까요? →" }).click();
+  await page.evaluate(async () => {
+    (
+      await import(
+        document.querySelector('script[type="module"][src*="/src/main.js"]').src
+      )
+    ).world.configure({ quality: "low" });
+  });
+  await expect(page.locator("#badge-count")).toHaveText("0 / 3");
+  await act(page, 19, -11, "느루");
+  await page.locator("#legend").click();
+  await expect(page.locator("#legend-quiz")).toBeDisabled();
+  await expect(page.locator("#legend-text")).toContainText("두 용");
+  await page.locator("#legend-next").click();
+  await close(page);
+  await page.reload();
+  await page.evaluate(async () => {
+    (
+      await import(
+        document.querySelector('script[type="module"][src*="/src/main.js"]').src
+      )
+    ).world.configure({ quality: "low" });
+  });
+  await act(page, 19, -11, "느루");
+  await page.locator("#legend").click();
+  await expect(page.locator("#legend-text")).toContainText("청룡과 황룡");
+  // Five remaining pages; the quiz cannot be reached by skipping the dialogue.
+  for (let i = 1; i < 6; i++) {
+    await expect(page.locator("#legend-quiz")).toBeDisabled();
+    await page.locator("#legend-next").click();
+  }
+  await expect(page.locator("[data-legend-answer]")).toHaveCount(3);
+  await page.locator('[data-legend-answer="1"]').click();
+  await expect(page.locator("#legend-feedback")).toContainText("다시 생각");
+  await expect(page.locator("#badge-count")).toHaveText("0 / 3");
+  await page.locator('[data-legend-answer="0"]').click();
+  await expect(
+    page.getByRole("heading", {
+      name: "이야기 수호대 스탬프를 받았어요!",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.locator("#badge-count")).toHaveText("1 / 3");
+  await expect(page.locator(".stamp-mini.earned")).toHaveCount(1);
+  await page.getByRole("button", { name: /스탬프 모음/ }).click();
+  await expect(page.locator(".guardian-card")).toHaveCount(3);
+  await close(page);
+  await page.reload();
+  await expect(page.locator("#badge-count")).toHaveText("1 / 3");
+  await act(page, 19, -11, "느루");
+  await page.locator("#legend").click();
+  await page.locator("#legend-quiz").click();
+  await expect(
+    page.getByRole("heading", {
+      name: "이미 받은 이야기 수호대 스탬프",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.locator("#badge-count")).toHaveText("1 / 3");
+});
+
+test("existing save retains civic/ecology progress; third stamp grants guardian success and teacher story edits persist", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "탐험을 시작할까요? →" }).click();
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem("geumsan-state-v1"));
+    s.completed = ["path", "trash", "lake"];
+    s.path = true;
+    delete s.guardian;
+    localStorage.setItem("geumsan-state-v1", JSON.stringify(s));
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: /스탬프 3개를 모아/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "탐험을 시작할까요? →" }).click();
+  await expect(page.locator("#badge-count")).toHaveText("2 / 3");
+  await expect(page.locator('[data-quest="lake"]')).toContainText("완료");
+  await page.evaluate(async () => {
+    (
+      await import(
+        document.querySelector('script[type="module"][src*="/src/main.js"]').src
+      )
+    ).world.configure({ quality: "low" });
+  });
+  await page.locator("#guardian-open").click();
+  await page.locator('[data-stamp="story"]').click();
+  for (let i = 0; i < 6; i++) await page.locator("#legend-next").click();
+  await page.locator('[data-legend-answer="0"]').click();
+  await expect(page.locator("#badge-count")).toHaveText("3 / 3");
+  await page.getByRole("button", { name: /스탬프 모음/ }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "우리 동네 수호대 · 미션 성공!",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.locator(".stamp-seal.earned")).toHaveCount(3);
+  await close(page);
+  await page.reload();
+  await expect(page.locator("#guardian-open")).toContainText("수호대 성공");
+  await page.locator('[data-page="settings"]').click();
+  await page.getByRole("button", { name: "교사용 수업 편집" }).click();
+  await page.locator("#section").selectOption("legend");
+  const editor = page.locator("#json-editor"),
+    data = JSON.parse(await editor.inputValue());
+  data.guardianLegend.pages[0].text = "선생님이 고친 금호지 전설 도입이에요.";
+  await editor.fill(JSON.stringify(data));
+  await page.getByRole("button", { name: "자료 저장", exact: true }).click();
+  await expect(page.locator("#teacher-result")).toContainText("저장했어요");
+  await close(page);
+  await page.reload();
+  await page.locator("#guardian-open").click();
+  await page.locator('[data-stamp="story"]').click();
+  await expect(page.locator("#legend-text")).toContainText("선생님이 고친");
+});

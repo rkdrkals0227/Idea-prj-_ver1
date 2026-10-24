@@ -1,6 +1,8 @@
+import { initialGuardian } from "./guardian.js";
 export function initialState() {
   return {
     version: 1,
+    guardian: initialGuardian(),
     started: [],
     completed: [],
     collected: [],

@@ -1,3 +1,14 @@
+import { guardianStamps } from "./data/guardian.js";
+import {
+  normalizeGuardian,
+  hasReadLegend,
+  readLegendPage,
+  answerLegend,
+  earnedGuardianStamps,
+  isGuardian,
+  validateGuardian,
+  validateGuardianLesson,
+} from "./guardian.js";
 import "./style.css";
 import { World } from "./world.js";
 import { defaults, habitats } from "./data/content.js";
@@ -41,7 +52,7 @@ let state,
 let tracked = null;
 let criticalUntil = 0;
 const app = $("#app");
-app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day">맑은 낮 · 개인 체험</span></div></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">TODAY'S ADVENTURE</span><h2>마을에 작은 변화를 🌱</h2><div id="quests"></div><div class="counter"><span>함께 쌓은 활동 배지</span><b id="badge-count">0 / 3</b></div><div class="progress"><i id="progress"></i></div></section><nav class="sidebar" aria-label="탐험 도구"><button class="nav-btn" data-page="map"><span>⌘</span>마을 지도</button><button class="nav-btn" id="camera"><span>▣</span>그림 등록</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="catalog"><span>▤</span>생태 도감</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="마을 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
+app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day">맑은 낮 · 개인 체험</span></div></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">TODAY'S ADVENTURE</span><h2>마을에 작은 변화를 🌱</h2><div id="quests"></div><div class="counter"><span>우리 동네 수호대 스탬프</span><b id="badge-count">0 / 3</b></div><div class="progress"><i id="progress"></i></div><div id="guardian-stamps" class="stamp-strip"></div><button id="guardian-open" class="guardian-open">스탬프 3개 모으기 · 미션 안내</button></section><nav class="sidebar" aria-label="탐험 도구"><button class="nav-btn" data-page="map"><span>⌘</span>마을 지도</button><button class="nav-btn" id="camera"><span>▣</span>그림 등록</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="catalog"><span>▤</span>생태 도감</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="마을 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
 function toast(message, critical = false) {
   if (!critical && Date.now() < criticalUntil) return;
   if (critical) criticalUntil = Date.now() + 8000;
@@ -118,10 +129,20 @@ function renderHud() {
         `<div class="quest-row ${state.completed.includes(id) ? "done" : ""}" role="button" tabindex="0" data-quest="${h(id)}"><span class="status-dot">${state.completed.includes(id) ? "✓" : "○"}</span><div>${h(content.quests[id].title)}<div class="summary-count">${state.completed.includes(id) ? "완료했어요" : state.started.includes(id) ? "진행 중" : "학교에서 시작해요"}</div></div></div>`,
     )
     .join("");
-  $("#badge-count").textContent =
-    `${ids.filter((id) => state.completed.includes(id)).length} / ${ids.length}`;
-  $("#progress").style.width =
-    `${(ids.filter((id) => state.completed.includes(id)).length / ids.length) * 100}%`;
+  const earned = earnedGuardianStamps(state),
+    idsEarned = earned.map((s) => s.id);
+  $("#badge-count").textContent = `${earned.length} / 3`;
+  $("#progress").style.width = `${(earned.length / 3) * 100}%`;
+  $("#guardian-stamps").innerHTML = guardianStamps
+    .map(
+      (s) =>
+        `<span class="stamp-mini ${idsEarned.includes(s.id) ? "earned" : ""}" title="${h(s.name)} · ${idsEarned.includes(s.id) ? "획득" : "도전 중"}">${s.icon}<small>${idsEarned.includes(s.id) ? "✓" : "○"}</small></span>`,
+    )
+    .join("");
+  $("#guardian-open").textContent = isGuardian(state)
+    ? "수호대 성공! 인증서 보기"
+    : "스탬프 3개 모으기 · 미션 안내";
+  $("#guardian-open").onclick = guardianOverview;
   document.querySelectorAll("[data-quest]").forEach((b) => {
     b.onclick = () => questInfo(b.dataset.quest);
     b.onkeydown = (e) => {
@@ -216,8 +237,10 @@ function talk(id) {
           : "before";
   const root = open(
     d.name,
-    `<p class="eyebrow">VILLAGE FRIENDS · 가상의 동물 주민</p><div class="card"><p>${h(d[stage])}</p></div><div class="stack actions"><button id="story">${h(residentThemes[key].title)}</button><button id="quiz">퀴즈 풀기</button><button id="help">${qid ? "도와줄 일이 있나요?" : key === "postman" ? "편지 쓰기" : "도서관 책장 보기"}</button><button id="bye">다음에 이야기해요</button></div>`,
+    `<p class="eyebrow">VILLAGE FRIENDS · 가상의 동물 주민</p><div class="card"><p>${h(d[stage])}</p></div><div class="stack actions">${key === "turtle" ? '<button id="legend" class="primary">금호지의 두 용 이야기 · 수호대 스탬프</button>' : ""}<button id="story">${h(residentThemes[key].title)}</button><button id="quiz">퀴즈 풀기</button><button id="help">${qid ? "도와줄 일이 있나요?" : key === "postman" ? "편지 쓰기" : "도서관 책장 보기"}</button><button id="bye">다음에 이야기해요</button></div>`,
   );
+  if (key === "turtle")
+    root.querySelector("#legend").onclick = () => legendDialogue();
   root.querySelector("#story").onclick = () => {
     const r = open(
       residentThemes[key].title,
@@ -323,7 +346,7 @@ function books() {
       )
       .join(
         "",
-      )}<article class="card"><h3>♧ 우리 반 생태 도감</h3><p>학생이 직접 관찰하고 만든 작품을 만나요.</p><button id="catalog">도감 펼치기</button></article><article class="card"><h3>자료를 읽는 탐험가</h3><p>출처·조사연도·관찰 기록을 살펴봐요.</p><button id="quiz">자료 읽기 퀴즈</button></article></div><p class="small">지역 원문에 접근할 수 없어 초기 지역 자료는 검토 초안이에요. 확인되지 않은 내용은 학생용 사실 카드로 표시하지 않아요.</p>`,
+      )}<article class="card"><h3>♧ 우리 반 생태 도감</h3><p>학생이 직접 관찰하고 만든 작품을 만나요.</p><button id="catalog">도감 펼치기</button></article><article class="card"><h3>금호지의 두 용 이야기</h3><p>선생님이 전해준 전설을 대화로 읽고 수호대 스탬프에 도전해요.</p><button id="legend-book">이야기 읽기</button></article><article class="card"><h3>자료를 읽는 탐험가</h3><p>출처·조사연도·관찰 기록을 살펴봐요.</p><button id="quiz">자료 읽기 퀴즈</button></article></div><p class="small">지역 원문에 접근할 수 없어 초기 지역 자료는 검토 초안이에요. 확인되지 않은 내용은 학생용 사실 카드로 표시하지 않아요.</p>`,
     "wide",
   );
   root.querySelectorAll("[data-book]").forEach(
@@ -343,6 +366,7 @@ function books() {
       }),
   );
   root.querySelector("#catalog").onclick = catalog;
+  root.querySelector("#legend-book").onclick = () => legendDialogue();
   root.querySelector("#quiz").onclick = () => quiz("library");
 }
 function pathPuzzle() {
@@ -417,9 +441,10 @@ function bag() {
     .filter(Boolean);
   const root = open(
     "내 가방",
-    `<h3>주운 쓰레기 ${items.length}개</h3>${items.length ? "<p>마을 수거함에 가까이 가서 분류해요.</p>" : "<p>지금은 가방이 비어 있어요. 길가의 쓰레기를 찾아볼까요?</p>"}<div class="cards">${items.map((i) => `<article class="card">${h(i.name)}</article>`).join("")}</div><h3 style="margin-top:24px">마음을 담은 활동 배지</h3>${state.badges.map((b) => `<span class="badge">✧ ${h(b)}</span>`).join("") || '<p class="small">함께 활동하면 배지가 생겨요.</p>'}<p class="small">이미 분류한 물건: ${state.sorted.length}개 · 접수한 편지: ${state.letters.length}개</p><button id="letters">편지 이어 쓰기</button>`,
+    `<button id="guardian-bag">우리 동네 수호대 스탬프 ${earnedGuardianStamps(state).length} / 3</button><h3 style="margin-top:20px">주운 쓰레기 ${items.length}개</h3>${items.length ? "<p>마을 수거함에 가까이 가서 분류해요.</p>" : "<p>지금은 가방이 비어 있어요. 길가의 쓰레기를 찾아볼까요?</p>"}<div class="cards">${items.map((i) => `<article class="card">${h(i.name)}</article>`).join("")}</div><h3 style="margin-top:24px">마음을 담은 활동 배지</h3>${state.badges.map((b) => `<span class="badge">✧ ${h(b)}</span>`).join("") || '<p class="small">함께 활동하면 배지가 생겨요.</p>'}<p class="small">이미 분류한 물건: ${state.sorted.length}개 · 접수한 편지: ${state.letters.length}개</p><button id="letters">편지 이어 쓰기</button>`,
   );
   root.querySelector("#letters").onclick = letter;
+  root.querySelector("#guardian-bag").onclick = guardianOverview;
 }
 function bins() {
   const items = state.collected
@@ -840,6 +865,7 @@ function chooseJSON(callback) {
   input.click();
 }
 function validateContent(c) {
+  validateGuardianLesson(c?.guardianLegend);
   if (
     !c ||
     typeof c.schoolName !== "string" ||
@@ -968,6 +994,7 @@ function teacher() {
       ["quizzes", "퀴즈"],
       ["sources", "출처·지역 학습 카드"],
       ["missions", "미션·분류·안내 블록"],
+      ["legend", "금호지 전설·수호대 퀴즈"],
       ["all", "전체 수업 자료"],
     ]
       .map(([k, v]) => `<option value="${k}">${v}</option>`)
@@ -989,6 +1016,7 @@ function teacher() {
     quizzes: ["quizzes"],
     sources: ["sources"],
     missions: ["quests", "waste", "tactile"],
+    legend: ["guardianLegend"],
     all: Object.keys(content),
   };
   const editor = root.querySelector("#json-editor"),
@@ -1117,6 +1145,7 @@ function settings() {
           state = {
             ...initialState(),
             ...b.state,
+            guardian: normalizeGuardian(b.state.guardian),
             settings: { ...initialState().settings, ...b.state.settings },
           };
           saveContent(content);
@@ -1132,6 +1161,7 @@ function settings() {
     });
 }
 function validateState(s) {
+  if (s.guardian !== undefined) validateGuardian(s.guardian);
   for (const k of [
     "started",
     "completed",
@@ -1191,13 +1221,113 @@ function applySettings() {
     toast("이 기기에서는 소리를 재생하지 못했어요. 무음으로 탐험할 수 있어요.");
   }
 }
+function guardianOverview() {
+  const earned = earnedGuardianStamps(state).map((s) => s.id),
+    done = isGuardian(state);
+  const root = open(
+    done ? "우리 동네 수호대 · 미션 성공!" : "우리 동네 수호대 · 스탬프 모으기",
+    `
+    <div class="guardian-summary ${done ? "complete" : ""}"><span class="welcome-icon">${done ? "✧" : "♧"}</span><h3>${done ? "축하해요! 우리 동네 수호대가 되었어요." : "세 가지 스탬프를 모두 모으면 미션 성공!"}</h3><p>${earned.length} / 3 스탬프 · ${done ? "이야기를 기억하고, 이웃을 배려하고, 자연을 돌봤어요." : "같은 활동을 반복해도 같은 스탬프가 늘어나지는 않아요."}</p></div>
+    <div class="cards">${guardianStamps.map((s) => `<article class="card guardian-card"><span class="stamp-seal ${earned.includes(s.id) ? "earned" : ""}">${s.icon}</span><h3>${h(s.name)}</h3><span class="badge">${earned.includes(s.id) ? "✓ 획득 완료" : "○ 도전 중"}</span><p>${h(s.description)}</p><p class="small">${h(s.location)}</p><button data-stamp="${s.id}">${s.id === "story" ? "금호지 이야기 듣기" : "관련 활동 보기"}</button></article>`).join("")}</div>`,
+    "wide",
+  );
+  root.querySelectorAll("[data-stamp]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        if (b.dataset.stamp === "story") legendDialogue();
+        else if (b.dataset.stamp === "ecology") questInfo("lake");
+        else {
+          const r = open(
+            "마을 수호대 · 두 가지 실천",
+            '<p>안내 길과 주택가를 모두 돌보면 마을 스탬프를 받아요.</p><div class="stack"><button id="path">안내 길 수리</button><button id="trash">주택가 쓰레기 분류</button></div>',
+          );
+          r.querySelector("#path").onclick = () => questInfo("path");
+          r.querySelector("#trash").onclick = () => questInfo("trash");
+        }
+      }),
+  );
+}
+function legendDialogue(index = null) {
+  const lesson = content.guardianLegend;
+  let current =
+    index ??
+    lesson.pages.findIndex((p) => !state.guardian.legendSeen.includes(p.id));
+  if (current < 0) current = 0;
+  const page = lesson.pages[current],
+    read = hasReadLegend(state, lesson);
+  const root = open(
+    lesson.title,
+    `<span class="badge">전해지는 설화 · ${h(lesson.reviewStatus)}</span><p class="small">${h(lesson.notice)}</p>
+    <div class="legend-dialogue"><p class="eyebrow">${current + 1} / ${lesson.pages.length} 장</p><h3>${h(page.speaker)}</h3><p id="legend-text">${h(page.text)}</p></div>
+    <p class="small">읽은 대화 ${lesson.pages.filter((p) => state.guardian.legendSeen.includes(p.id)).length} / ${lesson.pages.length}장 · 출처: ${h(lesson.sourceTitle)}</p>
+    <div class="actions"><button id="legend-prev" ${current === 0 ? "disabled" : ""}>이전 이야기</button><button id="legend-next" class="primary">${current === lesson.pages.length - 1 ? "이야기 다 읽었어요 → 퀴즈 풀기" : "다음 이야기 →"}</button><button id="legend-quiz" ${read ? "" : "disabled"}>${read ? "전설 퀴즈 풀기" : "끝까지 읽으면 퀴즈가 열려요"}</button></div>`,
+  );
+  root.querySelector("#legend-prev").onclick = () =>
+    legendDialogue(current - 1);
+  root.querySelector("#legend-next").onclick = () => {
+    if (!readLegendPage(state, lesson, page.id)) {
+      toast("앞의 이야기부터 차례로 읽어 주세요.");
+      return;
+    }
+    persist();
+    if (current === lesson.pages.length - 1) legendQuiz();
+    else legendDialogue(current + 1);
+  };
+  root.querySelector("#legend-quiz").onclick = legendQuiz;
+}
+function legendQuiz() {
+  const lesson = content.guardianLegend;
+  if (!hasReadLegend(state, lesson)) {
+    toast("금호지 이야기를 끝까지 읽은 뒤 퀴즈에 도전해 주세요.");
+    legendDialogue();
+    return;
+  }
+  if (state.guardian.legendQuizPassed) {
+    legendReward(false);
+    return;
+  }
+  const q = lesson.quiz,
+    root = open(
+      "금호지 전설 · 수호대 퀴즈",
+      `<span class="badge">전설 내용 떠올리기</span><h3>${h(q.question)}</h3><div class="stack">${q.options.map((o, i) => `<button data-legend-answer="${i}">${i + 1}. ${h(o)}</button>`).join("")}</div><div id="legend-feedback" aria-live="polite"></div>`,
+    );
+  root.querySelectorAll("[data-legend-answer]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const result = answerLegend(state, lesson, +b.dataset.legendAnswer);
+        if (result === "wrong") {
+          const el = root.querySelector("#legend-feedback");
+          el.className = "feedback";
+          el.textContent =
+            "다시 생각해 볼까요? 마을을 걱정하며 “싸움을 멈추어라!” 하고 말한 사람을 떠올려 보세요.";
+          return;
+        }
+        if (result === "locked") {
+          legendDialogue();
+          return;
+        }
+        persist();
+        legendReward(result === "earned");
+      }),
+  );
+}
+function legendReward(fresh) {
+  const root = open(
+    fresh
+      ? "이야기 수호대 스탬프를 받았어요!"
+      : "이미 받은 이야기 수호대 스탬프",
+    `<div class="guardian-summary"><span class="stamp-seal earned">☾</span><h3>이야기 수호대</h3><p>${h(content.guardianLegend.quiz.explanation)}</p><p>우리 동네 수호대 스탬프 <b>${earnedGuardianStamps(state).length} / 3</b></p><p>${isGuardian(state) ? "미션 성공! 우리 동네 수호대가 되었어요." : "나머지 스탬프도 모아 우리 동네 수호대가 되어 보세요."}</p></div><button id="passport" class="primary">스탬프 모음 ${isGuardian(state) ? "· 수호대 인증서" : "· 남은 미션"} 보기</button>`,
+  );
+  root.querySelector("#passport").onclick = guardianOverview;
+}
 function welcome() {
   const root = open(
     "금산마을에 오신 걸 환영해요",
-    `<div class="welcome-banner"><span class="eyebrow">OUR LITTLE VILLAGE, OUR BIG DISCOVERIES</span><h2 class="welcome-title">한 걸음, 한 이야기.<br>우리가 돌보는 작은 마을</h2><p>주민의 이야기를 듣고, 마을을 돌보고,<br>내 그림으로 생태 지도를 채워 보세요.</p><div class="feature-row"><span>♧ 주민과 대화</span><span>✧ 함께 문제 해결</span><span>▣ 움직이는 내 그림</span></div></div><p class="small">진주시 금산면의 장소 이름을 빌려 수업 동선에 맞게 만든 <b>축약 지도</b>예요. 주민은 가상의 인물이며 실제 동물 서식의 증거가 아니에요. 학교·회의 결과는 예시입니다.</p><p class="notice">처음에는 바로 뒤의 학교 문에서 <b>E키</b>를 눌러 들어가 보세요. 기록과 그림은 이 브라우저에만 저장돼요. 별도 계정·유료 API가 필요하지 않아요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`,
+    `<div class="welcome-banner"><span class="eyebrow">OUR LITTLE VILLAGE, OUR BIG DISCOVERIES</span><h2 class="welcome-title">스탬프 3개를 모아<br>우리 동네 수호대가 되자!</h2><p>이야기·마을·생태 스탬프를 <b>하나씩, 모두 3개</b> 모으면 미션 성공!<br>우리 동네를 알고 돌보는 수호대가 될 수 있어요.</p><ol class="guardian-intro"><li><b>이야기 스탬프</b> — 금호지 전설을 끝까지 듣고 퀴즈 맞히기</li><li><b>마을 스탬프</b> — 안내 길 수리와 주택가 정리 완료하기</li><li><b>생태 스탬프</b> — 금호지 호수 돌봄 완료하기</li></ol></div><p class="small">진주시 금산면의 장소 이름을 빌려 수업 동선에 맞게 만든 <b>축약 지도</b>예요. 주민은 가상의 인물이며 실제 동물 서식의 증거가 아니에요. 학교·회의 결과는 예시입니다.</p><p class="notice">처음에는 바로 뒤의 학교 문에서 <b>E키</b>를 눌러 들어가 보세요. 기록과 그림은 이 브라우저에만 저장돼요. 별도 계정·유료 API가 필요하지 않아요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`,
   );
   root.querySelector("#start").onclick = () => {
     state.welcomed = true;
+    state.guardian.introSeen = true;
     persist();
     close();
   };
@@ -1304,7 +1434,7 @@ try {
     );
   }
   $("#loading").remove();
-  if (!state.welcomed) welcome();
+  if (!state.welcomed || !state.guardian.introSeen) welcome();
   setInterval(() => {
     drawMap($("#mini"));
     if (!world.indoor) {

@@ -1,3 +1,4 @@
+import { defaultGuardianLegend } from "./guardian.js";
 import {
   extraQuizzes,
   defaultQuizContexts,
@@ -70,6 +71,7 @@ export const sources = [
   },
 ];
 export const defaults = {
+  guardianLegend: defaultGuardianLegend,
   quizRoutingVersion: 2,
   schoolName: "금산새봄학교",
   className: "4학년 마을탐험반",
