@@ -102,27 +102,6 @@
     ]
   },
   {
-    "id": "school",
-    "sourceFile": "05_place_school.glb",
-    "originalBytes": 5217480,
-    "webBytes": 450796,
-    "animations": []
-  },
-  {
-    "id": "library",
-    "sourceFile": "06_place_library.glb",
-    "originalBytes": 5063276,
-    "webBytes": 418544,
-    "animations": []
-  },
-  {
-    "id": "apartment",
-    "sourceFile": "07_place_apartment.glb",
-    "originalBytes": 5341156,
-    "webBytes": 463212,
-    "animations": []
-  },
-  {
     "id": "lake",
     "sourceFile": "08_place_lake.glb",
     "originalBytes": 4955948,
@@ -233,5 +212,32 @@
     "originalBytes": 3400756,
     "webBytes": 133220,
     "animations": []
+  },
+  {
+    "id": "school",
+    "sourceFile": "05_place_school.glb",
+    "originalBytes": 5217480,
+    "webBytes": 3977336,
+    "animations": [],
+    "geometryPreserved": true,
+    "textureSize": 1024
+  },
+  {
+    "id": "library",
+    "sourceFile": "06_place_library.glb",
+    "originalBytes": 5063276,
+    "webBytes": 3876348,
+    "animations": [],
+    "geometryPreserved": true,
+    "textureSize": 1024
+  },
+  {
+    "id": "apartment",
+    "sourceFile": "07_place_apartment.glb",
+    "originalBytes": 5341156,
+    "webBytes": 4055864,
+    "animations": [],
+    "geometryPreserved": true,
+    "textureSize": 1024
   }
 ]
