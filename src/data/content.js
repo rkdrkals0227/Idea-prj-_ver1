@@ -1,3 +1,4 @@
+import { classRules, expandedTactile } from "./class-rules.js";
 import { defaultGuardianLegend } from "./guardian.js";
 import {
   extraQuizzes,
@@ -71,6 +72,7 @@ export const sources = [
   },
 ];
 export const defaults = {
+  classRules,
   guardianLegend: defaultGuardianLegend,
   quizRoutingVersion: 2,
   schoolName: "금호초등학교",
@@ -227,16 +229,7 @@ export const defaults = {
     },
   ],
   sources,
-  tactile: {
-    text: "게임용 직선 연결 체험이에요. 실제 시설 수리는 담당 기관이 해요. 선형은 방향을 안내하고 점형은 주의를 알리는 역할을 해요. 아래 배치는 실제 시공 기준이 아니며 교사의 검토가 필요해요.",
-    solution: [
-      { type: "dot", rotation: 0 },
-      { type: "line", rotation: 0 },
-      { type: "line", rotation: 0 },
-      { type: "line", rotation: 0 },
-      { type: "dot", rotation: 0 },
-    ],
-  },
+  tactile: expandedTactile,
   waste: [
     {
       id: "can",

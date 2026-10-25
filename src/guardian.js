@@ -9,7 +9,7 @@ export function normalizeGuardian(value) {
 export function canHearLegend(state) {
   return (
     canEnterLevel(state, 3) &&
-    (state.journey.met.includes("turtle") || state.guardian?.legendQuizPassed)
+    (state.journey.met.includes("turtle") || state.journey.openedLakeBook || state.guardian?.legendQuizPassed)
   );
 }
 export function hasReadLegend(state, lesson) {

@@ -1,3 +1,5 @@
+import { naturalTerrain, decorateClassroom, riverAt } from "./scenery.js";
+import { dayPhase } from "./experience.js";
 import { residentIds, createPatrol, stepPatrol } from "./patrol.js";
 import { gameKey, isTextEntry } from "./input.js";
 import * as THREE from "three";
@@ -92,7 +94,8 @@ export class World {
     this.canvas = this.renderer.domElement;
     this.canvas.setAttribute("aria-label", "금산마을 3D 탐험 화면");
     this.canvas.tabIndex = 0;
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x788d5d, 1.8));
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0x788d5d, 1.8);
+    this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xfff5d9, 1.8);
     sun.position.set(-15, 32, 20);
     sun.castShadow = true;
@@ -106,6 +109,8 @@ export class World {
     });
     sun.shadow.bias = -0.001;
     this.scene.add(sun);
+    this.sun=sun;
+    this.updateDayNight();
     this.outdoor = new THREE.Group();
     this.scene.add(this.outdoor);
     this.createVillage();
@@ -199,8 +204,8 @@ export class World {
         ],
         false,
       );
-      if (hits[0])
-        this.callbacks.interact("art:" + hits[0].object.userData.artId);
+      if (hits[0]) this.callbacks.interact("art:" + hits[0].object.userData.artId);
+      else if(!this.indoor && ray.intersectObject(this.lakeModel,true).length) this.callbacks.interact("lake-story");
     });
     this.animate();
   }
@@ -350,10 +355,7 @@ export class World {
   }
   createVillage() {
     shape("box", C.grass, [66, 0.35, 56], [0, -0.2, 0], this.outdoor);
-    shape("box", C.path, [51, 0.04, 4], [1, 0.015, 3], this.outdoor);
-    shape("box", C.path, [4, 0.045, 33], [1, 0.018, -3], this.outdoor);
-    shape("box", C.path, [17, 0.04, 3], [18, 0.018, -10], this.outdoor);
-    shape("box", C.path, [3, 0.04, 11], [-10, 0.018, 0], this.outdoor);
+    this.nature=naturalTerrain(this.outdoor);
     this.pathPatch = shape(
       "box",
       C.path,
@@ -585,10 +587,7 @@ export class World {
     }
     for (let z = -1; z <= 20; z += 3)
       (z === 8 || z === 17 ? lotus : water).push([-28, z]);
-    this.tileBatch("grass", grass);
-    this.tileBatch("paving", paving);
-    this.tileBatch("water", water);
-    this.tileBatch("lotusWater", lotus);
+    // Uploaded terrain tiles are retained as assets; organic terrain replaces their grid.
     for (const [x, z] of [
       [-14, 3],
       [6, 3],
@@ -610,25 +609,35 @@ export class World {
       this.block(x, z, w, d);
     }
     this.tactileTiles = [];
-    for (let i = 0; i < 9; i++)
-      if (i !== 4) {
-        const g = new THREE.Group();
-        g.position.set(-9 + i, 0, 3);
-        this.outdoor.add(g);
-        shape("box", 0xf0db9b, [0.85, 0.09, 0.85], [0, 0.06, 0], g);
-        this.loadRole("tactile", g);
+    const route=this.content.tactile.solution;
+    const position=(t,i)=>Number.isInteger(t.col)?[-9+t.col*2,3+t.row*2]:[-9+i*2,3];
+    route.forEach((t,i)=>{
+      const [x,z]=position(t,i),g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=t.rotation*Math.PI/180;this.outdoor.add(g);
+      if(i===1){
+        this.brokenTile=g;this.loadRole("tactileBroken",g);
+        this.fixedTile=new THREE.Group();this.fixedTile.position.set(x,0,z);this.outdoor.add(this.fixedTile);this.loadRole("tactile",this.fixedTile);
+        this.pathPatch.position.set(x,.1,z);
+      } else {
+        if(t.type==='dot') {shape("box",0xe9bc64,[.95,.1,.95],[0,.08,0],g);for(let j=0;j<9;j++)shape("sphere",0xd9a846,[.1,.07,.1],[(j%3-1)*.22,.16,(Math.floor(j/3)-1)*.22],g)}
+        else this.loadRole("tactile",g);
         this.tactileTiles.push(g);
       }
-    this.brokenTile = new THREE.Group();
-    this.brokenTile.position.set(-5, 0, 3);
-    this.outdoor.add(this.brokenTile);
-    this.loadRole("tactileBroken", this.brokenTile);
-    this.fixedTile = new THREE.Group();
-    this.fixedTile.position.set(-5, 0, 3);
-    this.outdoor.add(this.fixedTile);
-    this.loadRole("tactile", this.fixedTile);
+    });
   }
+  updateDayNight(date=new Date()) {
+    const d=dayPhase(date);this.dayState=d;
+    const indoors=!!this.indoor;
+    this.hemi.intensity=indoors?1.7:d.light;
+    this.sun.intensity=indoors?1.7:d.phase==='night'?.55:d.phase==='dusk'?1.1:1.8;
+    this.hemi.color.set(indoors?'#fff4dc':d.phase==='night'?'#b6cee6':'#fff8e2');
+    this.sun.color.set(indoors?'#fff0cf':d.phase==='night'?'#bbd8ef':d.phase==='dusk'?'#f8bb82':'#fff0d0');
+    const sky=indoors?'#dedbc4':d.phase==='night'?'#3e526e':d.phase==='dusk'?'#dfc8b2':d.phase==='dawn'?'#c5d5cc':'#d6e8d9';
+    this.scene.background.set(sky);this.scene.fog.color.set(sky);
+    this.nextLightUpdate=Date.now()+30000;
+  }
+
   enter(id) {
+    this.roomColliders=[];
     this.keys.clear();
     if (this.indoor) this.exit();
     this.indoor = id;
@@ -639,10 +648,8 @@ export class World {
     shape("box", 0xe6e1c8, [16, 4, 0.3], [0, 2, -7], this.room);
     shape("box", 0xe6e1c8, [0.3, 4, 14], [-8, 2, 0], this.room);
     if (id === "school") {
-      shape("box", 0x588b75, [7, 2.6, 0.2], [0, 2, -6.7], this.room);
-      const t = label("우리 학급 회의 결과");
-      t.position.set(0, 3, -6.3);
-      this.room.add(t);
+      decorateClassroom(this.room,this.content.classRules);
+      this.roomColliders=[-4.7,4.7].flatMap(x=>[-.8,2.6].map(z=>({x,z,w:2.7,d:2.5})));
     } else {
       for (let i = -1; i <= 1; i++) {
         shape("box", 0x9e7655, [3, 3, 0.7], [i * 4, 1.5, -6], this.room);
@@ -670,6 +677,7 @@ export class World {
       },
     ];
     this.camera.position.set(10, 21, 27);
+    this.updateDayNight();
   }
   exit() {
     if (!this.indoor) return;
@@ -682,6 +690,8 @@ export class World {
     this.player.position.set(p[0], 0, p[2] + manifest[id].collision[1] / 2 + 2);
     this.indoor = null;
     this.outdoor.visible = true;
+    this.roomColliders=[];
+    this.updateDayNight();
     this.keys.clear();
   }
   sync(s) {
@@ -702,7 +712,9 @@ export class World {
     }
   }
   blocked(x, z) {
-    if (this.indoor) return Math.abs(x) > 7 || z > 6 || z < -5.4;
+    if (this.indoor) return Math.abs(x) > 7 || z > 6 || z < -5.4 || (this.roomColliders||[]).some(c=>Math.abs(x-c.x)<c.w/2+.3&&Math.abs(z-c.z)<c.d/2+.3);
+    const river=riverAt(z);
+    if(Math.abs(z)<24 && x<river.x+river.width+.38)return true;
     return (
       Math.abs(x) > 30 ||
       Math.abs(z) > 25 ||
@@ -928,6 +940,7 @@ export class World {
   }
   animate = () => {
     requestAnimationFrame(this.animate);
+    if(Date.now()>=this.nextLightUpdate)this.updateDayNight();
     const elapsed = this.clock.getDelta(),
       dt = Math.min(elapsed, 0.05),
       animationDt = Math.min(elapsed, 1),

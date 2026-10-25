@@ -1,3 +1,4 @@
+import { openTools, copyRules } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 import {
   start,
@@ -31,6 +32,7 @@ test("drawings preserve interior white, resize large images, restore and synchro
   ).toEqual([0, 255]);
   await publish(page, "흰 나비");
   await page.reload();
+  await openTools(page);
   await page.locator('[data-page="catalog"]').click();
   await expect(
     page.getByRole("heading", { name: "흰 나비", exact: true }),
@@ -54,6 +56,7 @@ test("drawings preserve interior white, resize large images, restore and synchro
   });
   expect(new Set(ids).size).toBe(1);
   await close(page);
+  await openTools(page);
   await page.locator('[data-page="catalog"]').click();
   const dl = page.waitForEvent("download");
   await page.getByRole("button", { name: "학급 작품 묶음 내보내기" }).click();
@@ -111,6 +114,7 @@ test("image failures, transparent PNG, storage quota feedback and paused Korean 
       throw new DOMException("Quota", "QuotaExceededError");
     };
   });
+  await openTools(page);
   await page.locator('[data-page="settings"]').click();
   await page.getByRole("button", { name: "설정 적용" }).click();
   await expect(page.locator("#toast")).toContainText("저장 공간이 부족");
@@ -254,6 +258,7 @@ test("library, forest and apartment have own learning; letters save, escape HTML
   await page.locator('[name="free"]').fill("<script>마음을 전해요</script>");
   await page.getByRole("button", { name: "초안 저장", exact: true }).click();
   await page.reload();
+  await openTools(page);
   await page.locator('[data-page="bag"]').click();
   await page.getByRole("button", { name: "편지 이어 쓰기" }).click();
   await expect(page.locator('[name="recipient"]')).toHaveValue("마을 주민");
@@ -291,8 +296,8 @@ test("lake care still requires cleanup, identification and expert handover but d
   await page.locator('[data-sort="lake-can"][data-category="금속"]').click();
   await page.locator('[data-sort="lake-paper"][data-category="종이"]').click();
   await close(page);
-  await act(page, 15.5, -14, "금호지");
   await lakeCare(page);
+  await page.locator("#clean-rest").click();
   await page
     .getByRole("button", { name: "거리를 두고 관찰·기록하고 어른에게 알리기" })
     .click();
@@ -342,6 +347,7 @@ test("bundle metadata and duplicate IDs round-trip without awarding a stamp on i
       },
     ],
   };
+  await openTools(page);
   await page.locator('[data-page="catalog"]').click();
   for (const name of ["가져온 풀", "새 이름 풀"]) {
     bundle.works[0].name = name;
@@ -381,6 +387,7 @@ test("teacher edits and invalid quiz validation persist while WebGL loss shows r
   page,
 }) => {
   await start(page, 3);
+  await openTools(page);
   await page.locator('[data-page="settings"]').click();
   await page.getByRole("button", { name: "교사용 수업 편집" }).click();
   const editor = page.locator("#json-editor"),

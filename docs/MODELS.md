@@ -16,9 +16,9 @@
 | lamp / bench / sign | 10_light / 11_bench / 12_Information Sign | 가로등·벤치 적용. 표지판 GLB는 보관만 하고 이름은 근접 말풍선으로 표시 |
 | tactile / tactileBroken | 13_Braille blocks / 15_Braille block_broken | 안내 길 정상/파손 위치, 수리하면 정상 모형으로 변경 |
 | fence | 14_시설물_울타리 | 학교 뒤와 주택가 뒤. 통학로·출입·전시 공간을 막지 않는 위치에 충돌 포함 |
-| paving / grass | 16_tile / 17_garden tile | 보도·풀밭 반복 인스턴스 |
+| paving / grass | 16_tile / 17_garden tile | 파일 보관. 현재는 자연스러운 지형 텍스처로 대체 |
 | wastePaper / Bottle / Can / Wrapper | 18_1 / 18_2 / 18_3 / 18_4 | 기존 수거물과 안내 길 방해물 ID, 완료하면 숨김 |
-| lotusWater / water | 19_water tile_with flower / 20_water tile | 남강 축약 하천에 반복 배치. 실제 금호지 모델의 장식과 겹치는 호수 타일 격자는 제거 |
+| lotusWater / water | 19_water tile_with flower / 20_water tile | 파일 보관. 현재는 굽이치는 강물 메시로 대체; 금호지는 업로드 연못 모델 유지 |
 
 주민 NPC는 otter/turtle/crane **각1마리, 합계3마리**만 생성합니다. 우체부·주택가 주민·생태 안내원 캐릭터는 제거했습니다. 해당 활동은 우체통, 아파트 생활 메뉴, 남생이 돌봄 대화로 유지하며 기존 퀘스트·퀴즈·편지 저장 ID는 바꾸지 않습니다. 편지 접수 뒤에는 추가 NPC 없이 봉투가 이동합니다. 학생 그림 작품은 NPC와 별개로 유지합니다.
 
@@ -56,3 +56,7 @@ blender -b -t 2 --python scripts/prepare-models.py -- /path/to/jobs.json
 ## 건물 형태 복원 확인
 
 기존6,000면 단순화 때문에 외벽·지붕/창문 형태가 손상된 것을 확인해 원본 메시로 복원했습니다. 학교73,835, 도서관71,399, 아파트75,933 정점이 원본과 같으며 원본 GLB의 모든 접근자 버퍼도 바이트 단위로 일치합니다. `provenance.json`의 `geometryPreserved:true`, `textureSize:1024`가 해당3개에 적용됩니다. 준비 스크립트도 건물3종에는 기본으로 메시 보존을 적용하므로 전체 재처리 때 다시6천 면으로 줄이지 않습니다. 새 화면은 `solid-buildings-three-residents.png`입니다.
+
+## 자연스러운 지형과 교실
+
+잔디·보도·강물의 규칙적인 GLB 격자를 제거하고 하나의 부드러운 풀밭/흙길 텍스처와 곡선 물가를 사용합니다. 파일은 삭제하지 않았으며 현재 사용하는 고유 GLB URL은25개입니다. 건물3종·플레이어·세 주민·나무·벤치·가로등·울타리·쓰레기·점자블록은 업로드 모델을 유지합니다. 기본 점자블록은 실제 마을에서도 여러 줄로 놓입니다. 교실은 기본 도형과 직접 그린 칠판·창문 텍스처로 구성합니다.

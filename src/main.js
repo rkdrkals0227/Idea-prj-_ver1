@@ -1,3 +1,7 @@
+import {validateTactile} from "./tactile.js";
+import { storyIllustration } from "./storybook.js";
+import { ActivityClock, formatDuration, dayPhase } from "./experience.js";
+import { validateClassRules } from "./classroom.js";
 import assetManifest from "./data/asset-manifest.json";
 import {
   levels,
@@ -68,7 +72,7 @@ let state,
 let tracked = null;
 let criticalUntil = 0;
 const app = $("#app");
-app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day">맑은 낮 · 개인 체험</span></div></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">OUR VILLAGE JOURNEY</span><h2 id="level-title">레벨 1 · 학교</h2><p id="level-goal" class="small"></p><div id="quests"></div><div class="counter"><span>우리 동네 수호대 스탬프</span><b id="badge-count">0 / 3</b></div><div class="progress"><i id="progress"></i></div><div id="guardian-stamps" class="stamp-strip"></div><button id="guardian-open" class="guardian-open">스탬프 3개 모으기 · 미션 안내</button></section><nav class="sidebar" aria-label="탐험 도구"><button class="nav-btn" data-page="map" aria-label="우리 반 생태 지도"><span>⌘</span>생태 지도</button><button class="nav-btn" id="camera"><span>▣</span>그림 등록</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="catalog"><span>▤</span>생태 도감</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="우리 반 생태 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
+app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day" id="day-time">한국 시간 · 개인 체험</span></div><div class="activity-chip" id="activity-time" title="이 창을 보고 있는 동안의 활동 시간 · 이 브라우저에 저장">이번 활동 00:00</div><button id="tools-toggle" class="tools-toggle" aria-expanded="false" aria-controls="explore-tools">탐험 도구 ☰</button></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">OUR VILLAGE JOURNEY</span><h2 id="level-title">레벨 1 · 학교</h2><p id="level-goal" class="small"></p><div id="quests"></div><div class="counter" hidden><span>우리 동네 수호대 스탬프</span><b id="badge-count">0 / 3</b></div><div class="progress" hidden><i id="progress"></i></div><div id="guardian-stamps" class="stamp-strip" hidden></div><button id="guardian-open" class="guardian-open">스탬프 3개 모으기 · 미션 안내</button></section><nav id="explore-tools" class="sidebar" aria-label="탐험 도구" hidden><button class="nav-btn" data-page="map" aria-label="우리 반 생태 지도"><span>⌘</span>생태 지도</button><button class="nav-btn" id="camera"><span>▣</span>그림 등록</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="catalog"><span>▤</span>생태 도감</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="우리 반 생태 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
 function toast(message, critical = false) {
   if (!critical && Date.now() < criticalUntil) return;
   if (critical) criticalUntil = Date.now() + 8000;
@@ -92,6 +96,7 @@ function open(title, html, width = "") {
   modal.innerHTML = `<section class="modal ${width}" role="dialog" aria-modal="true" aria-label="${h(title)}"><header class="modal-header"><h2>${h(title)}</h2><button class="close" aria-label="창 닫기">×</button></header><div class="modal-body">${html}</div></section>`;
   document.body.append(modal);
   world?.setPaused(true);
+  setTools(false);
   modal.querySelector(".close").onclick = close;
   modal.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
@@ -131,6 +136,22 @@ try {
     true,
   );
 }
+function setTools(visible){const nav=$("#explore-tools");if(!nav)return;nav.hidden=!visible;$("#tools-toggle").setAttribute("aria-expanded",String(visible));}
+$("#tools-toggle").onclick=()=>setTools($("#explore-tools").hidden);
+$("#world").addEventListener("pointerdown",()=>setTools(false));
+let activityClock=new ActivityClock(state.activity);
+let lastActivitySave=performance.now();
+function updateActivity(){
+  const now=performance.now();activityClock.tick(now,state.welcomed&&!document.hidden&&document.hasFocus());
+  $("#activity-time").textContent=`이번 활동 ${formatDuration(activityClock.sessionMs)} · 누적 ${formatDuration(activityClock.totalMs)}`;
+  const d=dayPhase();$("#day-time").textContent=`${d.time} · ${d.label}`;
+  document.documentElement.dataset.dayPhase=d.phase;
+  if(now-lastActivitySave>=15000){saveState(state);lastActivitySave=now}
+}
+setInterval(updateActivity,1000);
+for(const name of ['visibilitychange','focus','blur'])window.addEventListener(name,updateActivity);
+window.addEventListener('pagehide',()=>{activityClock.tick(performance.now(),false);saveState(state)});
+updateActivity();
 function persist() {
   reconcile(state, content);
   saveState(state);
@@ -147,7 +168,7 @@ function renderHud() {
     current > 4
       ? "전시한 약속을 생활에서도 이어가요."
       : levels[current - 1].description;
-  $("#quests").innerHTML = levels
+  $("#quests").innerHTML = levels.filter(l=>l.id===current)
     .map(
       (l) =>
         `<button class="level-row ${l.id === current ? "current" : ""} ${l.id < current ? "done" : ""}" data-level="${l.id}" aria-label="레벨 ${l.id} ${h(l.title)} ${l.id < current ? "완료" : l.id === current ? "진행 중" : "잠김"}"><span>${l.id < current ? "✓" : l.id > current ? "♙" : l.id}</span><div>${h(l.title)}<small>${l.id < current ? "완료" : l.id === current ? "지금 할 일" : "앞 레벨을 마치면 열려요"}</small></div></button>`,
@@ -178,6 +199,7 @@ function renderHud() {
   document
     .querySelector('[data-page="map"]')
     .classList.toggle("current-goal", activeGoal?.id === "eco-map");
+  $("#tools-toggle").classList.toggle("current-goal",!!activeGoal?.ui);
 }
 function levelGate(n) {
   if (canEnterLevel(state, n)) return true;
@@ -486,13 +508,13 @@ function pathPuzzle() {
     }));
   const root = open(
     "모두를 위한 안내 길",
-    `<p>${h(content.tactile.text)}</p><p class="notice">게임 속 주민과 함께하는 체험이에요. 실제 길은 어른과 담당 기관에 알려요.</p><button id="obstacle">상자 옮겨 통행로 비우기</button><p class="small">각 칸의 모양과 방향을 골라요. 직선 길의 선형 블록은 가로로 이어져야 해요.<br>점형: ● · 선형: ━ · 세로 방향: ┃</p><div id="tiles" class="tiles"></div><button id="check" class="primary">경로가 이어졌는지 확인</button><div id="path-feedback" aria-live="polite"></div>`,
+    `<p>${h(content.tactile.text)}</p><p class="notice">게임 속 주민과 함께하는 체험이에요. 실제 길은 어른과 담당 기관에 알려요.</p><button id="obstacle">상자 옮겨 통행로 비우기</button><p class="small">각 칸의 모양과 방향을 골라요. 모퉁이를 돌아 출발에서 도착까지 모두 이어 주세요. 가로 길은 가로 선형, 세로 길은 세로 선형이에요.<br>점형: ● · 선형: ━ · 세로 방향: ┃</p><div class="route-scroll"><div id="tiles" class="tiles ${content.tactile.layoutVersion===2?"route-grid":""}" style="--route-cols:${Number.isInteger(content.tactile.cols)?content.tactile.cols:5}"></div></div><button id="check" class="primary">경로가 이어졌는지 확인</button><div id="path-feedback" aria-live="polite"></div>`,
   );
   function draw() {
     root.querySelector("#tiles").innerHTML = tiles
       .map(
         (t, i) =>
-          `<div class="tile"><span class="glyph">${t.type === "empty" ? "?" : t.type === "dot" ? "⠿" : t.rotation % 180 === 0 ? "☰" : "Ⅲ"}</span><label class="small">${i + 1}번 칸<select data-type="${i}"><option value="empty" ${t.type === "empty" ? "selected" : ""}>빈칸</option><option value="dot" ${t.type === "dot" ? "selected" : ""}>점형</option><option value="line" ${t.type === "line" ? "selected" : ""}>선형</option></select></label><button data-rotate="${i}" style="font-size:.65rem;padding:5px">${t.rotation % 180 === 0 ? "가로 ↻" : "세로 ↻"}</button></div>`,
+          `<div class="tile" style="${Number.isInteger(content.tactile.solution[i].col)&&Number.isInteger(content.tactile.solution[i].row)?`grid-column:${content.tactile.solution[i].col+1};grid-row:${content.tactile.solution[i].row+1}`:""}"><span class="route-step">${i===0?"출발":i===tiles.length-1?"도착":`${i+1}번`}</span><span class="glyph">${t.type === "empty" ? "?" : t.type === "dot" ? "⠿" : t.rotation % 180 === 0 ? "☰" : "Ⅲ"}</span><label class="small">${i + 1}번 칸<select data-type="${i}"><option value="empty" ${t.type === "empty" ? "selected" : ""}>빈칸</option><option value="dot" ${t.type === "dot" ? "selected" : ""}>점형</option><option value="line" ${t.type === "line" ? "selected" : ""}>선형</option></select></label><button data-rotate="${i}" data-direction="${t.rotation%180}" style="font-size:.65rem;padding:5px">${t.rotation % 180 === 0 ? "가로 ↻" : "세로 ↻"}</button></div>`,
       )
       .join("");
     root.querySelectorAll("[data-type]").forEach(
@@ -606,8 +628,9 @@ function lakeAction(id) {
   }
   const root = open(
     "전문가와 함께하는 생태 돌봄",
-    `<p>모든 외래생물이 제거 대상은 아니에요. 관리 대상과 방법은 전문가가 관찰 근거를 확인하고 정해요.</p><p class="notice">이 체험에서는 실제 종을 수거하지 않아요. 보라색 모형은 전문가가 지정한 <b>연습 표본</b>이에요. 실제 남생이를 잡거나 옮기는 데 보상을 주지 않아요.</p><h3>우리가 할 수 있는 좋은 행동은?</h3><div class="stack"><button id="protect">거리를 두고 관찰·기록하고 어른에게 알리기</button><button id="wrong">보이는 생물을 모두 잡아서 옮기기</button><button id="handover" ${state.lake.picked && !state.lake.handed ? "" : "disabled"}>담아 온 연습 표본 인계하기</button></div><div id="lake-result" aria-live="polite"></div><p class="small">완료 조건: 호숫가 쓰레기 2개 분류 · 쉼터 정리 · 행동 구별 · 연습 표본 인계</p>`,
+    `<p>모든 외래생물이 제거 대상은 아니에요. 관리 대상과 방법은 전문가가 관찰 근거를 확인하고 정해요.</p><p class="notice">이 체험에서는 실제 종을 수거하지 않아요. 보라색 모형은 전문가가 지정한 <b>연습 표본</b>이에요. 실제 남생이를 잡거나 옮기는 데 보상을 주지 않아요.</p><button id="clean-rest">${state.lake.rest?"✓ 금호지 쉼터가 깨끗해요":"금호지 쉼터의 종이 조각 정리하기"}</button><h3>우리가 할 수 있는 좋은 행동은?</h3><div class="stack"><button id="protect">거리를 두고 관찰·기록하고 어른에게 알리기</button><button id="wrong">보이는 생물을 모두 잡아서 옮기기</button><button id="handover" ${state.lake.picked && !state.lake.handed ? "" : "disabled"}>담아 온 연습 표본 인계하기</button></div><div id="lake-result" aria-live="polite"></div><p class="small">완료 조건: 호숫가 쓰레기 2개 분류 · 쉼터 정리 · 행동 구별 · 연습 표본 인계</p>`,
   );
+  root.querySelector("#clean-rest").onclick=()=>{lakeAction("rest");root.querySelector("#clean-rest").textContent="✓ 금호지 쉼터가 깨끗해요"};
   root.querySelector("#wrong").onclick = () => {
     root.querySelector("#lake-result").textContent =
       "생물을 함부로 잡거나 옮기면 서식지를 해칠 수 있어요. 다시 골라 봐요.";
@@ -1028,6 +1051,7 @@ function chooseJSON(callback) {
   input.click();
 }
 function validateContent(c) {
+  validateClassRules(c.classRules);
   validateGuardianLesson(c?.guardianLegend);
   if (
     !c ||
@@ -1112,21 +1136,7 @@ function validateContent(c) {
       )
     )
       throw new Error("주민 대사 형식을 확인해 주세요.");
-  if (
-    !c.tactile ||
-    typeof c.tactile.text !== "string" ||
-    !Array.isArray(c.tactile.solution) ||
-    c.tactile.solution.length !== 5 ||
-    c.tactile.solution.some(
-      (t) =>
-        !["dot", "line"].includes(t.type) ||
-        !Number.isFinite(t.rotation) ||
-        t.rotation % 90 !== 0,
-    )
-  )
-    throw new Error(
-      "블록 정답은 5칸의 점형·선형과 90도 단위 방향으로 입력해 주세요.",
-    );
+  validateTactile(c.tactile);
   for (const w of c.waste)
     if (
       !["id", "name", "category"].every((k) => typeof w[k] === "string") ||
@@ -1168,6 +1178,7 @@ function teacher() {
   );
   const fields = {
     meeting: [
+      "classRules",
       "schoolName",
       "className",
       "meetingDate",
@@ -1308,10 +1319,13 @@ function settings() {
           state = {
             ...initialState(),
             ...b.state,
+            activity:{totalMs:Number.isFinite(b.state.activity?.totalMs)?Math.max(0,b.state.activity.totalMs):0},
             guardian: normalizeGuardian(b.state.guardian),
             journey: normalizeJourney(b.state.journey),
             settings: { ...initialState().settings, ...b.state.settings },
           };
+          activityClock=new ActivityClock(state.activity);
+          updateActivity();
           saveContent(content);
           persist();
           applySettings();
@@ -1411,6 +1425,10 @@ function chooseImage() {
 function showExhibition() {
   if (levelGate(4)) showMap();
 }
+function openLakeBook(){
+  if(!levelGate(3))return;
+  state.journey.openedLakeBook=true;persist();legendDialogue();
+}
 function legendDialogue(index = null) {
   if (!levelGate(3)) return;
   if (!canHearLegend(state)) {
@@ -1434,7 +1452,7 @@ function legendDialogue(index = null) {
   const root = open(
     lesson.title,
     `<span class="badge">전해지는 설화 · ${h(lesson.reviewStatus)}</span><p class="small">${h(lesson.notice)}</p>
-    <div class="legend-dialogue"><p class="eyebrow">${current + 1} / ${lesson.pages.length} 장</p><h3>${h(page.speaker)}</h3><p id="legend-text">${h(page.text)}</p></div>
+    <div class="storybook"><div class="story-art">${storyIllustration(current)}</div><div class="story-page"><p class="eyebrow">${current + 1} / ${lesson.pages.length} 장 · 금호지 이야기책</p><h3>${["금호지에 전해지는 이야기","두 용의 다툼","꼬리로 친 땅에 물이 고였어요","장군이 나섰어요","금호지를 지키는 청룡","우리도 마을을 아껴요"][current]||h(page.speaker)}</h3><p id="legend-text">${h(page.text)}</p></div></div>
     <p class="small">읽은 대화 ${lesson.pages.filter((p) => state.guardian.legendSeen.includes(p.id)).length} / ${lesson.pages.length}장 · 출처: ${h(lesson.sourceTitle)}</p>
     <div class="actions"><button id="legend-prev" ${current === 0 ? "disabled" : ""}>이전 이야기</button><button id="legend-next" class="primary">${current === lesson.pages.length - 1 ? "이야기 다 읽었어요 → 퀴즈 풀기" : "다음 이야기 →"}</button><button id="legend-quiz" ${read ? "" : "disabled"}>${read ? "전설 퀴즈 풀기" : "끝까지 읽으면 퀴즈가 열려요"}</button></div>`,
   );
@@ -1504,7 +1522,7 @@ function legendReward(fresh) {
 function welcome() {
   const root = open(
     "금산마을에 오신 걸 환영해요",
-    `<div class="welcome-banner"><span class="eyebrow">OUR LITTLE VILLAGE, OUR BIG DISCOVERIES</span><h2 class="welcome-title">레벨 1부터 차례로!<br>우리 동네 수호대가 되자!</h2><p>학교 → 통학로 → 금호지 → 우리 반 생태 지도, <b>네 레벨을 순서대로</b> 도전해요. 스탬프 3개를 모으면 미션 성공!<br>우리 동네를 알고 돌보는 수호대가 될 수 있어요.</p><ol class="guardian-intro"><li><b>레벨 1 · 학교</b> — 회의 결과 확인, 내 약속과 이번 주 실천 체크</li><li><b>레벨 2 · 통학로</b> — 안내 길과 주택가 문제 해결 · 마을 스탬프</li><li><b>레벨 3 · 금호지</b> — 동물 친구의 전설 대화와 퀴즈 · 이야기 스탬프</li><li><b>레벨 4 · 우리 반 생태 지도</b> — 내 그림·이름·보호 약속 등록 · 생태 스탬프</li></ol></div><p class="small">진주시 금산면의 장소 이름을 빌려 수업 동선에 맞게 만든 <b>축약 지도</b>예요. 주민은 가상의 인물이며 실제 동물 서식의 증거가 아니에요. 학교·회의 결과는 예시입니다.</p><p class="notice">처음에는 바로 뒤의 학교 문에서 <b>E키</b>를 눌러 들어가 보세요. 기록과 그림은 이 브라우저에만 저장돼요. 별도 계정·유료 API가 필요하지 않아요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`,
+    `<div class="welcome-banner"><span class="eyebrow">OUR LITTLE VILLAGE, OUR BIG DISCOVERIES</span><h2 class="welcome-title">레벨 1부터 차례로!<br>우리 동네 수호대가 되자!</h2><p>학교 → 통학로 → 금호지 → 우리 반 생태 지도, <b>네 레벨을 순서대로</b> 도전해요. 스탬프 3개를 모으면 미션 성공!<br>우리 동네를 알고 돌보는 수호대가 될 수 있어요.</p><ol class="guardian-intro"><li><b>레벨 1 · 학교</b> — 9월 규칙 따라 쓰기, 내 약속과 이번 주 실천 체크</li><li><b>레벨 2 · 통학로</b> — 안내 길과 주택가 문제 해결 · 마을 스탬프</li><li><b>레벨 3 · 금호지</b> — 동물 친구의 전설 대화와 퀴즈 · 이야기 스탬프</li><li><b>레벨 4 · 우리 반 생태 지도</b> — 내 그림·이름·보호 약속 등록 · 생태 스탬프</li></ol></div><p class="small">진주시 금산면의 장소 이름을 빌려 수업 동선에 맞게 만든 <b>축약 지도</b>예요. 주민은 가상의 인물이며 실제 동물 서식의 증거가 아니에요. 학교 공간과 마을 안건은 수업용 구성이며, 학급 규칙은 선생님이 제공한 9월 회의 결과입니다.</p><p class="notice">처음에는 바로 뒤의 학교 문에서 <b>E키</b>를 눌러 들어가 보세요. 기록과 그림은 이 브라우저에만 저장돼요. 별도 계정·유료 API가 필요하지 않아요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`,
   );
   root.querySelector("#start").onclick = () => {
     state.welcomed = true;
@@ -1560,7 +1578,9 @@ function interact(id) {
     case "exhibition":
       return showExhibition();
     case "rest":
-      return lakeAction(id);
+      return openLakeBook();
+    case "lake-story":
+      return openLakeBook();
     case "manager":
     case "eco-station":
       return lakeAction("manager");

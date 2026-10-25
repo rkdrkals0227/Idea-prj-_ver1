@@ -1,3 +1,4 @@
+import { rulesComplete } from "./classroom.js";
 export const levels = [
   {
     id: 1,
@@ -29,6 +30,8 @@ export function initialJourney() {
     schoolReady: false,
     plan: { agendaId: "", promise: "" },
     checks: {},
+    ruleCopies: {},
+    openedLakeBook:false,
     met: [],
     exhibitIds: [],
   };
@@ -39,6 +42,7 @@ export function normalizeJourney(value) {
     ...value,
     plan: { ...initialJourney().plan, ...value?.plan },
     checks: value?.checks || {},
+    ruleCopies: value?.ruleCopies || {},
     met: value?.met || [],
     exhibitIds: value?.exhibitIds || [],
   };
@@ -60,7 +64,8 @@ export function markBriefingRead(s) {
 export function saveSchoolPlan(s, plan, content) {
   if (
     !s.journey?.briefingRead ||
-    !content.agendas.some((a) => a.id === plan.agendaId) ||
+    !(content.agendas.some((a) => a.id === plan.agendaId) || content.classRules?.rules.some(r=>r.id===plan.agendaId)) ||
+    (!s.journey.schoolReady && !rulesComplete(s, content)) ||
     !String(plan.promise || "").trim()
   )
     return false;

@@ -16,6 +16,7 @@ test("school must be completed before road, legend and exhibits unlock", () => {
     false,
   );
   journey.markBriefingRead(s);
+  s.journey.ruleCopies=Object.fromEntries(defaults.classRules.rules.map(r=>[r.id,r.text]));
   assert.equal(
     journey.saveSchoolPlan(s, { agendaId: "bad", promise: "약속" }, defaults),
     false,
@@ -62,6 +63,7 @@ test("week boundaries use Seoul dates, reject future checks, and never relock sc
   ]);
   const s = initialState();
   journey.markBriefingRead(s);
+  s.journey.ruleCopies=Object.fromEntries(defaults.classRules.rules.map(r=>[r.id,r.text]));
   journey.saveSchoolPlan(
     s,
     { agendaId: "a-path", promise: "길 살피기" },

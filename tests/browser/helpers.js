@@ -113,10 +113,19 @@ export async function publish(page, name = "우리 생태 친구") {
 }
 
 export async function sortBag(page) {
+  await openTools(page);
   await page.locator('[data-page="bag"]').click();
   await page.locator("#sort-from-bag").click();
 }
 export async function lakeCare(page) {
   await act(page, 19, -11, "동물 친구");
   await page.locator("#lake-care").click();
+}
+
+export async function openTools(page) {
+  if(await page.locator('#explore-tools').isHidden())await page.locator('#tools-toggle').click();
+}
+export async function copyRules(page) {
+ const rules=await page.evaluate(async()=>{const m=await import('/src/main.js');return m.content.classRules.rules});
+ for(const r of rules){await page.locator(`[data-rule-input="${r.id}"]`).fill(r.text);await page.locator(`[data-copy-check="${r.id}"]`).click()}
 }

@@ -41,9 +41,8 @@ test("uploaded characters and scenery load with real geometry and state-specific
   expect(result.crane).toEqual(
     expect.arrayContaining(["idle", "walk", "greet"]),
   );
-  expect(result.tiles).toEqual(
-    expect.arrayContaining(["grass", "paving", "water", "lotusWater"]),
-  );
+  expect(result.tiles).toEqual([]);
+  expect(await inspect(page,m=>!!m.world.nature.ground&&!!m.world.nature.stream)).toBe(true);
   expect(result.loaded.every(([, s]) => s === "loaded")).toBe(true);
   await inspect(page, (m) => {
     const e = m.world.entities.find((e) => e.id === "turtle");
@@ -152,7 +151,7 @@ test("complete upload pack uses player, otter, buildings, tree, lake and fence w
     "lake",
     "fence",
   ]);
-  expect(loaded.count).toBe(29);
+  expect(loaded.count).toBe(25);
   await page.evaluate(
     () =>
       new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),

@@ -1,3 +1,4 @@
+import { openTools, copyRules } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 import { start, move, close, picture, publish } from "./helpers.js";
 async function inspect(page, fn) {
@@ -61,6 +62,7 @@ test("bag replaces deleted bins and the single ecology map displays published ar
   await page.locator('[data-level="2"]').click();
   await page.locator('#road-trash').click();await page.locator('#track').click();
   await expect(page.locator('#map-sort')).toBeVisible();await close(page);
+  await openTools(page);
   await page.locator('[data-page="bag"]').click();
   await page.locator("#sort-from-bag").click();
   for (const [id, category] of [
@@ -83,6 +85,7 @@ test("bag replaces deleted bins and the single ecology map displays published ar
     localStorage.setItem("geumsan-state-v1", JSON.stringify(m.state));
   });
   await page.reload();
+  await openTools(page);
   await page.locator('[data-page="map"]').first().click();
   await expect(
     page.getByRole("heading", { name: "우리 반 생태 지도", exact: true }),
@@ -91,6 +94,7 @@ test("bag replaces deleted bins and the single ecology map displays published ar
   // The same local image editor remains available through the camera action.
   await picture(page);
   await publish(page, "우리 반 나비");
+  await openTools(page);
   await page.locator('[data-page="map"]').first().click();
   await expect(page.locator("[data-art]")).toContainText("우리 반 나비");
   await expect(page.locator("[data-art]")).toContainText("거리를 두고");

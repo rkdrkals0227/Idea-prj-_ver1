@@ -14,6 +14,7 @@ export function loadState() {
       ? {
           ...initialState(),
           ...d,
+          activity: {totalMs:Number.isFinite(d.activity?.totalMs)&&d.activity.totalMs>=0?d.activity.totalMs:0},
           guardian: normalizeGuardian(d.guardian),
           journey: normalizeJourney(d.journey),
           lake: { ...initialState().lake, ...d.lake },

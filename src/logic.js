@@ -3,6 +3,7 @@ import { initialGuardian } from "./guardian.js";
 export function initialState() {
   return {
     version: 1,
+    activity: {totalMs:0},
     journey: initialJourney(),
     guardian: initialGuardian(),
     started: [],

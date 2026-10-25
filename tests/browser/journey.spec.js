@@ -1,3 +1,4 @@
+import { openTools, copyRules } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 async function app(page) {
   return page.evaluate(async () => {
@@ -39,6 +40,7 @@ test("school is mandatory and future activities explain the current level rather
   await expect(page.getByRole("dialog")).toContainText("레벨 1");
   await expect(page.locator("#legend")).toHaveCount(0);
   await page.getByRole("button", { name: "창 닫기", exact: true }).click();
+  await openTools(page);
   await page.locator("#camera").click();
   await expect(page.getByRole("dialog")).toContainText("레벨 1");
   expect((await app(page)).state.guardian.legendQuizPassed).toBe(false);
@@ -133,6 +135,7 @@ test("Namgang exhibition requires the creature name and protection pledge and ap
     };
   });
   expect(data.poster).toBe(false);
+  await openTools(page);
   await page.locator('[data-page="map"]').first().click();
   await expect(page.locator("[data-art]")).toContainText("남강의 수달 그림");
   expect(data.work).toContain("거리를");
@@ -155,6 +158,7 @@ test("all four levels play in sequence with weekly checks, road solving, legend 
   await act(page, -10, -1, "들어가기");
   await act(page, 0, -3.8, "회의");
   await expect(page.locator("#school-next")).toBeDisabled();
+  await copyRules(page);
   await page.locator("#read-meeting").click();
   await page
     .locator('[name="promise"]')
@@ -178,6 +182,7 @@ test("all four levels play in sequence with weekly checks, road solving, legend 
     [16, 5],
   ])
     await act(page, x, z);
+  await openTools(page);
   await page.locator('[data-page="bag"]').click();
   await page.locator("#sort-from-bag").click();
   for (const [id, category] of [
@@ -227,6 +232,7 @@ test("weekly plans survive reload and reduced motion makes the current objective
   await start(page);
   await act(page, -10, -1, "들어가기");
   await act(page, 0, -3.8, "회의");
+  await copyRules(page);
   await page.locator("#read-meeting").click();
   await page.locator('[name="promise"]').fill("우리 길 살피기");
   await page.locator('[name="done"]').check();
@@ -240,6 +246,7 @@ test("weekly plans survive reload and reduced motion makes the current objective
   await expect(page.locator('[name="promise"]')).toHaveValue("우리 길 살피기");
   await expect(page.locator('[name="note"]')).toHaveValue("실천 기록");
   await close(page);
+  await openTools(page);
   await page.locator('[data-page="settings"]').click();
   await page.locator('[name="motion"]').check();
   await page.getByRole("button", { name: "설정 적용" }).click();
@@ -313,6 +320,7 @@ test("own newly published artwork and pledge stay visible despite many imported 
   });
   expect(shown.awarded).toBe(true);
   expect.soft(shown.visible).toBe(true);
+  await openTools(page);
   await page.locator('[data-page="map"]').first().click();
   await expect
     .soft(page.locator("[data-art]").filter({ hasText: "내가 전시한 친구" }))
@@ -326,6 +334,7 @@ test("newest work remains readable in the single ecology map without physical po
   await start(page, 4);
   await picture(page);
   await publish(page, "가리지 않는 작품");
+  await openTools(page);
   await page.locator('[data-page="map"]').first().click();
   await expect(
     page.getByRole("heading", { name: "우리 반 생태 지도", exact: true }),
