@@ -999,3 +999,19 @@ fieldset {
   margin-top: 5px;
   color: #637a60;
 }
+
+.model-loading {
+  position: absolute;
+  left: 50%;
+  bottom: 125px;
+  transform: translateX(-50%);
+  z-index: 3;
+  background: #fffbedee;
+  color: #315747;
+  padding: 8px 16px;
+  border-radius: 18px;
+  font-size: 13px;
+  pointer-events: none;
+  max-width: 80%;
+  text-align: center;
+}

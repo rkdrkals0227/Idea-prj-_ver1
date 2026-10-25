@@ -1549,6 +1549,26 @@ try {
     state,
     content,
   });
+  const modelStatus = document.createElement("div");
+  modelStatus.className = "model-loading";
+  modelStatus.setAttribute("role", "status");
+  $("#world").after(modelStatus);
+  const updateModelStatus = () => {
+    const values = [...world.modelStatus.values()];
+    modelStatus.textContent = `주민과 마을 소품을 불러오고 있어요 · ${values.filter((v) => v !== "loading").length}/${values.length}`;
+  };
+  updateModelStatus();
+  const modelProgress = setInterval(updateModelStatus, 300);
+  world.modelsReady.then(() => {
+    clearInterval(modelProgress);
+    const failed = [...world.modelStatus.values()].filter(
+      (v) => v === "fallback",
+    ).length;
+    modelStatus.textContent = failed
+      ? "일부 소품은 기본 모습으로 보여요. 새로고침하면 다시 불러와요."
+      : "주민과 마을 소품 준비 완료!";
+    setTimeout(() => modelStatus.remove(), failed ? 9000 : 2500);
+  });
   world.canvas.addEventListener("webglcontextlost", (e) => {
     e.preventDefault();
     world.setPaused(true);

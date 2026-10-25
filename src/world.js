@@ -1,6 +1,6 @@
 import { gameKey, isTextEntry } from "./input.js";
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { ModelLibrary, ModelActor, fitModel, modelVariants } from "./models.js";
 import manifest from "./data/asset-manifest.json";
 import { habitats } from "./data/content.js";
 const C = {
@@ -73,6 +73,9 @@ export class World {
     this.colliders = [];
     this.mixers = [];
     this.models = {};
+    this.modelLibrary = new ModelLibrary(import.meta.env.BASE_URL);
+    this.modelLoads = [];
+    this.modelStatus = new Map();
     this.art = [];
     this.artToken = 0;
     this.indoor = null;
@@ -112,6 +115,7 @@ export class World {
     this.player.position.set(-10, 0, 1);
     this.scene.add(this.player);
     this.loadRole("player", this.player);
+    this.modelsReady = Promise.allSettled(this.modelLoads);
     this.camera.position.set(5, 23, 27);
     this.camera.lookAt(this.player.position);
     this.ring = new THREE.Mesh(
@@ -346,8 +350,10 @@ export class World {
     shape("box", 0x8c7353, [0.13, 1.8, 0.13], [-width * 0.32, 0.9, 0], group);
     shape("box", 0x8c7353, [0.13, 1.8, 0.13], [width * 0.32, 0.9, 0], group);
     const sign = this.physicalSign(text.split(" · ")[0], width, 1.05);
-    sign.position.set(0, 1.8, 0.03);
+    sign.position.set(0, 1.8, 0.4);
+    sign.userData.keepOnModel = true;
     group.add(sign);
+    this.loadRole("sign", group);
     return group;
   }
   animal(id) {
@@ -405,23 +411,6 @@ export class World {
     shape("box", C.path, [4, 0.045, 33], [1, 0.018, -3], this.outdoor);
     shape("box", C.path, [17, 0.04, 3], [18, 0.018, -10], this.outdoor);
     shape("box", C.path, [3, 0.04, 11], [-10, 0.018, 0], this.outdoor);
-    for (let i = 0; i < 9; i++) {
-      shape(
-        "box",
-        0xf0db9b,
-        [0.85, 0.09, 0.85],
-        [-9 + i, 0.06, 3],
-        this.outdoor,
-      );
-      for (let j = 0; j < 3; j++)
-        shape(
-          "box",
-          0xc6a555,
-          [0.62, 0.02, 0.07],
-          [-9 + i, 0.115, 2.77 + j * 0.22],
-          this.outdoor,
-        );
-    }
     this.pathPatch = shape(
       "box",
       C.path,
@@ -429,13 +418,11 @@ export class World {
       [-5, 0.1, 3],
       this.outdoor,
     );
-    this.pathObstacle = shape(
-      "box",
-      0xc58b61,
-      [0.8, 0.8, 0.8],
-      [-7, 0.4, 3],
-      this.outdoor,
-    );
+    this.pathObstacle = new THREE.Group();
+    this.pathObstacle.position.set(-7, 0, 3);
+    this.outdoor.add(this.pathObstacle);
+    shape("box", 0xc58b61, [0.8, 0.8, 0.8], [0, 0.4, 0], this.pathObstacle);
+    this.loadRole("wasteWrapper", this.pathObstacle);
     this.building("school", this.content.schoolName, C.roof);
     this.building("library", "작은 도서관", 0x7fa397);
     this.building("apartment", "햇살 아파트", 0xb7a3bd);
@@ -551,6 +538,16 @@ export class World {
       const obj = this.entity("waste:" + w.id, w.name, w.x, w.z);
       obj.add(m);
       m.position.set(0, 0.25, 0);
+      this.loadRole(
+        w.category === "종이"
+          ? "wastePaper"
+          : w.category === "금속"
+            ? "wasteCan"
+            : w.category === "플라스틱"
+              ? "wasteBottle"
+              : "wasteWrapper",
+        obj,
+      );
     }
     shape("box", 0x8bc2c9, [3.5, 0.08, 27], [-28, -0.02, 9], this.outdoor);
     this.block(-28, 9, 3.5, 27);
@@ -564,62 +561,146 @@ export class World {
       shape("box", 0x9b805c, [0.12, 2, 0.15], [x + 1, 0.98, z], this.outdoor);
       shape("box", 0xe9e9d6, [2.5, 2, 0.12], [x, 2, z], this.outdoor);
     }
+    this.addUploadedScenery();
     this.sync(this.state);
   }
-  async loadRole(id, group) {
+  loadRole(id, group) {
     const cfg = manifest[id];
     if (!cfg?.url) return;
-    const loader = new GLTFLoader();
-    let dependencyFailed = false;
-    loader.manager.onError = () => {
-      dependencyFailed = true;
-    };
-    try {
-      const gltf = await loader.loadAsync(
-        import.meta.env.BASE_URL + cfg.url.replace(/^\//, ""),
-      );
-      if (dependencyFailed) throw new Error("외부 텍스처·버퍼 누락");
-      const model = gltf.scene;
-      const box = new THREE.Box3().setFromObject(model),
-        size = box.getSize(new THREE.Vector3()),
-        center = box.getCenter(new THREE.Vector3()),
-        max = Math.max(size.x, size.y, size.z);
-      if (!Number.isFinite(max) || max <= 0)
-        throw new Error("유효하지 않은 크기");
-      const scale = cfg.targetSize / max;
-      model.scale.multiplyScalar(scale);
-      model.position.set(
-        -center.x * scale,
-        -box.min.y * scale + (cfg.groundHeight || 0),
-        -center.z * scale,
-      );
-      const wrapper = new THREE.Group();
-      wrapper.rotation.y = cfg.rotation || 0;
-      wrapper.add(model);
-      for (const c of [...group.children]) if (!c.isSprite) c.visible = false;
-      group.add(wrapper);
-      model.traverse((o) => {
-        if (o.isMesh) {
-          o.castShadow = true;
-          o.receiveShadow = true;
-        }
-      });
-      if (gltf.animations.length) {
-        const mixer = new THREE.AnimationMixer(model);
-        const actions = {};
-        for (const [role, name] of Object.entries(cfg.animations || {})) {
-          const clip = THREE.AnimationClip.findByName(gltf.animations, name);
-          if (clip) actions[role] = mixer.clipAction(clip);
-        }
-        actions.idle?.play();
-        this.mixers.push(mixer);
-        this.models[id] = { actions };
-      }
-    } catch (e) {
-      this.callbacks.warning(
-        `${id} 모델을 불러오지 못해 임시 모형을 사용해요. 파일 경로와 외부 텍스처·버퍼를 확인해 주세요.`,
-      );
+    const fallback = [...group.children].filter(
+      (c) => !c.isSprite && !c.userData.keepOnModel,
+    );
+    const variants = modelVariants(cfg);
+    const actor = new ModelActor(group, cfg);
+    if (cfg.variants) this.models[id] = actor;
+    for (const [role, variant] of Object.entries(variants)) {
+      const key = `${id}:${role}`;
+      this.modelStatus.set(key, "loading");
+      const task = this.modelLibrary
+        .load(variant.url)
+        .then((gltf) => {
+          actor.add(role, gltf, variant.clip);
+          if (role === "idle")
+            for (const child of fallback) child.visible = false;
+          if (id === "tactileBroken") this.pathPatch.visible = false;
+          this.modelStatus.set(key, "loaded");
+          group.userData.uploadedRole = id;
+          if (!cfg.variants) this.models[id] ||= actor;
+        })
+        .catch(() => {
+          this.modelStatus.set(key, "fallback");
+          if (role === "idle") actor.setState("idle");
+          this.callbacks.warning(
+            `${id} 모델(${role})을 읽지 못했어요. 임시 모형으로 계속할 수 있어요. 새로고침하거나 파일 경로·텍스처를 확인해 주세요.`,
+          );
+        });
+      this.modelLoads.push(task);
     }
+    return actor;
+  }
+  prop(id, x, z, rotation = 0) {
+    const g = new THREE.Group();
+    g.position.set(x, 0, z);
+    g.rotation.y = rotation;
+    this.outdoor.add(g);
+    shape("box", 0xaa9872, [0.5, 0.7, 0.5], [0, 0.35, 0], g);
+    this.loadRole(id, g);
+    return g;
+  }
+  tileBatch(id, positions) {
+    if (!positions.length || !manifest[id]?.url) return;
+    this.modelStatus.set(`tiles:${id}`, "loading");
+    const task = this.modelLibrary
+      .load(manifest[id].url)
+      .then((gltf) => {
+        const root = fitModel(gltf.scene, manifest[id]);
+        root.updateMatrixWorld(true);
+        const group = new THREE.Group();
+        group.userData.tileRole = id;
+        root.traverse((mesh) => {
+          if (!mesh.isMesh) return;
+          const instances = new THREE.InstancedMesh(
+            mesh.geometry,
+            mesh.material,
+            positions.length,
+          );
+          instances.receiveShadow = true;
+          const matrix = new THREE.Matrix4();
+          positions.forEach(([x, z], i) => {
+            matrix.makeTranslation(x, 0, z);
+            matrix.multiply(mesh.matrixWorld);
+            instances.setMatrixAt(i, matrix);
+          });
+          instances.instanceMatrix.needsUpdate = true;
+          group.add(instances);
+        });
+        this.outdoor.add(group);
+        this.modelStatus.set(`tiles:${id}`, "loaded");
+      })
+      .catch(() => {
+        this.modelStatus.set(`tiles:${id}`, "fallback");
+        this.callbacks.warning(
+          `${id} 바닥을 읽지 못해 기본 바닥을 사용해요. 새로고침해 주세요.`,
+        );
+      });
+    this.modelLoads.push(task);
+  }
+  addUploadedScenery() {
+    const grass = [],
+      paving = [],
+      water = [],
+      lotus = [];
+    for (let x = -30; x <= 30; x += 6)
+      for (let z = -24; z <= 24; z += 6) grass.push([x, z]);
+    for (let x = -24; x <= 26; x += 2)
+      for (const z of [2, 4]) paving.push([x, z]);
+    for (let z = -18; z <= 12; z += 2)
+      for (const x of [0, 2]) if (z < 2 || z > 4) paving.push([x, z]);
+    for (let z = -4; z <= 0; z += 2) paving.push([-10, z]);
+    for (let x = 10; x <= 26; x += 2) paving.push([x, -10]);
+    for (let x = 18; x <= 30; x += 3)
+      for (let z = -21; z <= -15; z += 3) {
+        if (Math.hypot((x - 24) / 8, (z + 18) / 6) < 0.9)
+          (x === 24 && z === -18 ? lotus : water).push([x, z]);
+      }
+    for (let z = -1; z <= 20; z += 3) water.push([-28, z]);
+    this.tileBatch("grass", grass);
+    this.tileBatch("paving", paving);
+    this.tileBatch("water", water);
+    this.tileBatch("lotusWater", lotus);
+    for (const [x, z] of [
+      [-14, 3],
+      [6, 3],
+      [23, 4],
+      [-5, -10],
+    ])
+      this.prop("lamp", x, z);
+    for (const [x, z] of [
+      [-15, -1],
+      [9, -12],
+      [25, -10],
+    ]) {
+      this.prop("bench", x, z);
+      this.block(x, z, 2.1, 0.8);
+    }
+    this.tactileTiles = [];
+    for (let i = 0; i < 9; i++)
+      if (i !== 4) {
+        const g = new THREE.Group();
+        g.position.set(-9 + i, 0, 3);
+        this.outdoor.add(g);
+        shape("box", 0xf0db9b, [0.85, 0.09, 0.85], [0, 0.06, 0], g);
+        this.loadRole("tactile", g);
+        this.tactileTiles.push(g);
+      }
+    this.brokenTile = new THREE.Group();
+    this.brokenTile.position.set(-5, 0, 3);
+    this.outdoor.add(this.brokenTile);
+    this.loadRole("tactileBroken", this.brokenTile);
+    this.fixedTile = new THREE.Group();
+    this.fixedTile.position.set(-5, 0, 3);
+    this.outdoor.add(this.fixedTile);
+    this.loadRole("tactile", this.fixedTile);
   }
   enter(id) {
     this.keys.clear();
@@ -679,7 +760,10 @@ export class World {
   }
   sync(s) {
     this.state = s;
-    this.pathPatch.visible = !s.path;
+    this.pathPatch.visible =
+      !s.path && this.modelStatus.get("tactileBroken:idle") !== "loaded";
+    if (this.brokenTile) this.brokenTile.visible = !s.path;
+    if (this.fixedTile) this.fixedTile.visible = !!s.path;
     this.pathObstacle.visible = !s.path;
     this.restTrash.visible = !s.lake.rest;
     this.specimen.visible = !s.lake.picked;
@@ -853,8 +937,10 @@ export class World {
   interactNearby() {
     if (!this.moveEnabled) return;
     const target = this.updateNearby();
-    if (target) this.callbacks.interact(target.id);
-    else
+    if (target) {
+      this.models[target.id]?.setState("greet");
+      this.callbacks.interact(target.id);
+    } else
       this.callbacks.warning(
         "문이나 주민 가까이 가 주세요. 아래에 대상 이름이 나타나면 E키나 그 버튼으로 이야기할 수 있어요.",
       );
@@ -883,7 +969,9 @@ export class World {
   }
   animate = () => {
     requestAnimationFrame(this.animate);
-    const dt = Math.min(this.clock.getDelta(), 0.05),
+    const elapsed = this.clock.getDelta(),
+      dt = Math.min(elapsed, 0.05),
+      animationDt = Math.min(elapsed, 1),
       t = this.clock.elapsedTime;
     let dx = 0,
       dz = 0;
@@ -907,17 +995,30 @@ export class World {
     }
     const reduced = this.settings?.motion;
     this.player.position.y = length && !reduced ? Math.sin(t * 14) * 0.06 : 0;
-    const actions = this.models.player?.actions;
-    if (actions) {
-      if (length) {
-        actions.idle?.stop();
-        if (!actions.walk?.isRunning()) actions.walk?.play();
-      } else {
-        actions.walk?.stop();
-        if (!actions.idle?.isRunning()) actions.idle?.play();
+    this.models.player?.setState(length ? "walk" : "idle");
+    for (const [id, actor] of Object.entries(this.models)) {
+      if (["otter", "turtle", "crane"].includes(id)) {
+        const entity = this.entities.find((e) => e.id === id);
+        const patrol =
+          this.moveEnabled &&
+          !this.indoor &&
+          !reduced &&
+          Math.sin(t * 0.28 + entity.x) > 0.7;
+        if (actor.current?.role !== "greet") {
+          actor.setState(patrol ? "walk" : "idle");
+          entity.obj.position.x =
+            entity.x + (patrol ? Math.sin(t * 0.8) * 0.35 : 0);
+          entity.obj.rotation.y = patrol
+            ? Math.cos(t * 0.8) > 0
+              ? Math.PI / 2
+              : -Math.PI / 2
+            : 0;
+        }
       }
+      actor.update(
+        reduced && actor.current?.role !== "greet" ? 0 : animationDt,
+      );
     }
-    for (const m of this.mixers) m.update(dt);
     const p = this.player.position;
     const target = new THREE.Vector3(p.x + 13, p.y + 21, p.z + 23);
     this.camera.position.lerp(target, 1 - Math.exp(-dt * 5));
