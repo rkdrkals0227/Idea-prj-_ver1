@@ -1,0 +1,12 @@
+# Typing-only school, periodic hints and tidier roads
+
+User requests immediate execution under standing design/publication delegation.
+- School contains only actual4-4 September rules, inline typing feedback and completion/navigation. Remove read-confirmation, weekly plan/check, reflection/example agenda/teacher buttons from level1. Keep old saved records in backups. Each complete answer auto-validates on input/compositionend; after all rules are accepted set schoolReady immediately (idempotent). Migrate old all-copied saves into completed without further actions.
+- Hint scheduler uses existing foreground activity milliseconds: current uncompleted level, about60000ms interval; pause/defer during modal, background/blur, welcome/error. Reset on level change, stop after success. Content describes current mission, destination and exact E/tools actions, including path vs collection vs sorting vs book vs quiz vs upload. Nonmodal18sec polite status, hide when opening editors, no focus stealing.
+- Keep all38 tactile positions and repair unchanged; align main road to z3.05, narrow/soften borders, trim behind-school/library deadends, connect library-side/lake walkway and plaza. Move roadside props outside walking strip where needed.
+- Tests first: typing-only complete+partial/IME/reload, scheduler59/60/120sec/defer/reset/stop and contextual messages. Adapt obsolete weekly UI checks to typing-only; retain legacy unit compatibility.
+- Verify targeted full journey/model/continuous route + actual reminder with clock fastForward; review; screenshots/build/static smoke; publish main/gh-pages with existing authorization.
+
+Progress: unit43green;7 affected browser cases green across selected runs/retry. Full 4-level journey, auto clear after compositionend, partial old save, restore/motion, continuous38-block route, minute modal deferral/newlevel verified. Review no important findings; visible stale subgoal hint now hides promptly. Board title updated to typing; bench moved off lake walkway; manual five walkway centres all unblocked. Screenshots of cleaned road, typing-only and instant clear inspected. Finishing native60second status and static/publication checks.
+
+Complete: unmocked reminder appeared60.252s after start, actual status screenshot inspected. Typing-only/clear/road screenshots verified; static build HTTP200,25GLB200, typed4rules opens level2, errors0. No unresolved review findings. Publishing with standing GitHub authorization.

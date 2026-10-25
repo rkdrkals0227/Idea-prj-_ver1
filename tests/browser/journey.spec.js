@@ -141,7 +141,7 @@ test("Namgang exhibition requires the creature name and protection pledge and ap
   expect(data.work).toContain("거리를");
 });
 
-test("all four levels play in sequence with weekly checks, road solving, legend dialogue and final exhibition", async ({
+test("all four levels play in sequence with typing, road solving, legend dialogue and final exhibition", async ({
   page,
 }) => {
   // Four complete lessons plus a final full-model reload on software WebGL.
@@ -159,15 +159,7 @@ test("all four levels play in sequence with weekly checks, road solving, legend 
   await act(page, 0, -3.8, "회의");
   await expect(page.locator("#school-next")).toBeDisabled();
   await copyRules(page);
-  await page.locator("#read-meeting").click();
-  await page
-    .locator('[name="promise"]')
-    .fill("안내 길 위에 물건을 놓지 않아요");
-  await page.locator('[name="done"]').check();
-  await page.locator('[name="note"]').fill("오늘 통행로를 살폈어요");
-  await page.getByRole("button", { name: "계획과 오늘 체크 저장" }).click();
   await expect(page.locator("#level-title")).toContainText("레벨 2");
-  await expect(page.locator(".weekly-grid")).toContainText("오늘 통행로");
   await page.locator("#school-next").click();
   await act(page, -6, 4.7, "활동하기");
   await page.locator("#check").click();
@@ -225,7 +217,7 @@ test("all four levels play in sequence with weekly checks, road solving, legend 
   await expect(page.locator("#level-title")).toContainText("성공");
 });
 
-test("weekly plans survive reload and reduced motion makes the current objective steady", async ({
+test("typed rules survive reload and reduced motion makes the current objective steady", async ({
   page,
 }) => {
   const { start, act, close } = await import("./helpers.js");
@@ -233,18 +225,12 @@ test("weekly plans survive reload and reduced motion makes the current objective
   await act(page, -10, -1, "들어가기");
   await act(page, 0, -3.8, "회의");
   await copyRules(page);
-  await page.locator("#read-meeting").click();
-  await page.locator('[name="promise"]').fill("우리 길 살피기");
-  await page.locator('[name="done"]').check();
-  await page.locator('[name="note"]').fill("실천 기록");
-  await page.getByRole("button", { name: "계획과 오늘 체크 저장" }).click();
   await close(page);
   await page.reload();
   await expect(page.locator("#level-title")).toContainText("레벨 2");
   await page.locator("#guardian-open").click();
-  await page.locator("#weekly-again").click();
-  await expect(page.locator('[name="promise"]')).toHaveValue("우리 길 살피기");
-  await expect(page.locator('[name="note"]')).toHaveValue("실천 기록");
+  await page.locator("#rules-again").click();
+  await expect(page.locator('[data-rule-input]').first()).toHaveValue("싸울 경우, 말로 풀기");
   await close(page);
   await openTools(page);
   await page.locator('[data-page="settings"]').click();

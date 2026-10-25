@@ -5,8 +5,8 @@ test('opening explains three missions and pupils can type numbered class rules',
  await page.getByRole('button',{name:'탐험을 시작할까요? →'}).click();await act(page,-10,-1,'학교');await act(page,0,-4,'회의');
  await expect(page.locator('.class-chalkboard')).toContainText('4-4반 아이들');
  const rules=await inspect(page,m=>m.content.classRules.rules);
- for(let i=0;i<rules.length;i++){await page.locator(`[data-rule-input="${rules[i].id}"]`).fill(`${i+1}. ${rules[i].text}.`);await page.locator(`[data-copy-check="${rules[i].id}"]`).click()}
- await expect(page.locator('#read-meeting')).toBeEnabled();
+ for(let i=0;i<rules.length;i++){await page.locator(`[data-rule-input="${rules[i].id}"]`).fill(`${i+1}. ${rules[i].text}.`);}
+ await expect(page.locator('#school-feedback')).toContainText("미션 클리어");
 });
 test('continuous school-apartment route, enlarged buildings and repaired lake stay playable',async({page})=>{
  test.setTimeout(120000);await start(page,3);await inspect(page,async m=>{await m.world.modelsReady});

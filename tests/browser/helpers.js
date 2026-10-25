@@ -127,5 +127,5 @@ export async function openTools(page) {
 }
 export async function copyRules(page) {
  const rules=await page.evaluate(async()=>{const m=await import('/src/main.js');return m.content.classRules.rules});
- for(const r of rules){await page.locator(`[data-rule-input="${r.id}"]`).fill(r.text);await page.locator(`[data-copy-check="${r.id}"]`).click()}
+ for(const r of rules){const input=page.locator(`[data-rule-input="${r.id}"]`);if(await input.isEditable())await input.fill(r.text)}
 }

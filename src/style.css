@@ -1115,3 +1115,9 @@ html[data-day-phase=dusk] .sun {background:#e5ad7d;}
 .mission-briefing p {font-size:.83rem;line-height:1.9;margin:0;word-break:keep-all;}
 .briefing-finale {padding:17px 20px;background:#e6eed6;border-radius:16px;line-height:1.8;font-size:.85rem;}
 @media(max-width:700px){.mission-briefings{grid-template-columns:1fr;gap:8px;}.mission-briefing{padding:12px 15px;}.mission-briefing h3{margin:6px 0;}}
+.mission-reminder {position:absolute;bottom:174px;left:50%;transform:translateX(-50%);width:min(680px,calc(100vw - 40px));display:flex;gap:15px;padding:17px 20px;border:1px solid #d5dfbe;border-radius:20px;background:#fffcedf5;color:#365949;box-shadow:0 6px 28px #314e3b22;}
+.mission-reminder b {font-size:.8rem;color:#7b875d;}
+.mission-reminder p {font-size:.9rem;line-height:1.85;margin:6px 0 0;word-break:keep-all;}
+.mission-reminder button {align-self:flex-start;border:0;background:transparent;padding:2px 8px;color:#698369;font-size:1.4rem;}
+.copy-line input[readonly] {background:#edf0dc;color:#49694e;}
+@media(max-width:650px){.mission-reminder{bottom:228px;padding:12px 15px;width:calc(100vw - 24px);}.mission-reminder p{font-size:.8rem;}}

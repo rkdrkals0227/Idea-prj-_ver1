@@ -3,7 +3,7 @@ export const levels = [
   {
     id: 1,
     title: "학교 · 우리 반의 약속",
-    description: "회의 결과를 읽고 실천 계획과 오늘의 첫 체크를 남겨요.",
+    description: "학교 칠판의 규칙 네 줄을 타자로 맞히면 바로 완료돼요.",
   },
   {
     id: 2,

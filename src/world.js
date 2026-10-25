@@ -591,16 +591,16 @@ export class World {
       (z === 8 || z === 17 ? lotus : water).push([-28, z]);
     // Uploaded terrain tiles are retained as assets; organic terrain replaces their grid.
     for (const [x, z] of [
-      [-14, 3],
+      [-14, 5.8],
       [6, 5.8],
-      [23, 4],
+      [23, 5.8],
       [-5, -10],
     ])
       this.prop("lamp", x, z);
     for (const [x, z] of [
       [-15, -1],
       [9, -12],
-      [25, -10],
+      [26, -7.6],
     ]) {
       this.prop("bench", x, z);
       this.block(x, z, 2.1, 0.8);
@@ -672,7 +672,7 @@ export class World {
         id: id === "school" ? "board" : "books",
         title:
           id === "school"
-            ? "회의 결과 · 활동 돌아보기"
+            ? "학급 회의 규칙 · 타자 치기"
             : "책장 · 지역 자료와 도감",
         x: 0,
         z: -4,

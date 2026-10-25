@@ -1,7 +1,8 @@
+import {MissionReminders,missionHint} from "./hints.js";
 import {validateTactile} from "./tactile.js";
 import { storyIllustration } from "./storybook.js";
 import { ActivityClock, formatDuration, dayPhase } from "./experience.js";
-import { validateClassRules } from "./classroom.js";
+import { validateClassRules, completeSchoolTyping } from "./classroom.js";
 import assetManifest from "./data/asset-manifest.json";
 import {
   levels,
@@ -72,7 +73,7 @@ let state,
 let tracked = null;
 let criticalUntil = 0;
 const app = $("#app");
-app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day" id="day-time">한국 시간 · 개인 체험</span></div><div class="activity-chip" id="activity-time" title="이 창을 보고 있는 동안의 활동 시간 · 이 브라우저에 저장">이번 활동 00:00</div><button id="tools-toggle" class="tools-toggle" aria-expanded="false" aria-controls="explore-tools">탐험 도구 ☰</button></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">OUR VILLAGE JOURNEY</span><h2 id="level-title">레벨 1 · 학교</h2><p id="level-goal" class="small"></p><div id="quests"></div><div class="counter" hidden><span>우리 동네 수호대 스탬프</span><b id="badge-count">0 / 3</b></div><div class="progress" hidden><i id="progress"></i></div><div id="guardian-stamps" class="stamp-strip" hidden></div><button id="guardian-open" class="guardian-open">스탬프 3개 모으기 · 미션 안내</button></section><nav id="explore-tools" class="sidebar" aria-label="탐험 도구" hidden><button class="nav-btn" data-page="map" aria-label="우리 반 생태 지도"><span>⌘</span>생태 지도</button><button class="nav-btn" id="camera"><span>▣</span>그림 등록</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="catalog"><span>▤</span>생태 도감</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="우리 반 생태 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
+app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day" id="day-time">한국 시간 · 개인 체험</span></div><div class="activity-chip" id="activity-time" title="이 창을 보고 있는 동안의 활동 시간 · 이 브라우저에 저장">이번 활동 00:00</div><button id="tools-toggle" class="tools-toggle" aria-expanded="false" aria-controls="explore-tools">탐험 도구 ☰</button></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">OUR VILLAGE JOURNEY</span><h2 id="level-title">레벨 1 · 학교</h2><p id="level-goal" class="small"></p><div id="quests"></div><div class="counter" hidden><span>우리 동네 수호대 스탬프</span><b id="badge-count">0 / 3</b></div><div class="progress" hidden><i id="progress"></i></div><div id="guardian-stamps" class="stamp-strip" hidden></div><button id="guardian-open" class="guardian-open">스탬프 3개 모으기 · 미션 안내</button></section><nav id="explore-tools" class="sidebar" aria-label="탐험 도구" hidden><button class="nav-btn" data-page="map" aria-label="우리 반 생태 지도"><span>⌘</span>생태 지도</button><button class="nav-btn" id="camera"><span>▣</span>그림 등록</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="catalog"><span>▤</span>생태 도감</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="우리 반 생태 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><aside id="mission-reminder" class="mission-reminder" role="status" aria-live="polite" hidden><div><b>지금 할 일</b><p id="mission-reminder-text"></p></div><button id="reminder-dismiss" aria-label="미션 안내 닫기">×</button></aside><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp" hidden><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
 function toast(message, critical = false) {
   if (!critical && Date.now() < criticalUntil) return;
   if (critical) criticalUntil = Date.now() + 8000;
@@ -96,6 +97,7 @@ function open(title, html, width = "") {
   modal.innerHTML = `<section class="modal ${width}" role="dialog" aria-modal="true" aria-label="${h(title)}"><header class="modal-header"><h2>${h(title)}</h2><button class="close" aria-label="창 닫기">×</button></header><div class="modal-body">${html}</div></section>`;
   document.body.append(modal);
   world?.setPaused(true);
+  hideMissionReminder();
   setTools(false);
   modal.querySelector(".close").onclick = close;
   modal.addEventListener("keydown", (e) => {
@@ -139,6 +141,19 @@ try {
 function setTools(visible){const nav=$("#explore-tools");if(!nav)return;nav.hidden=!visible;$("#tools-toggle").setAttribute("aria-expanded",String(visible));}
 $("#tools-toggle").onclick=()=>setTools($("#explore-tools").hidden);
 $("#world").addEventListener("pointerdown",()=>setTools(false));
+const reminders=new MissionReminders();
+let reminderTimeout;
+function hideMissionReminder(){clearTimeout(reminderTimeout);$("#mission-reminder").hidden=true;}
+$("#reminder-dismiss").onclick=hideMissionReminder;
+function updateMissionReminder(){
+ const level=journeyLevel(state),hint=missionHint(state,content,world?.indoor);
+ const eligible=!!world&&state.welcomed&&!modal&&!document.hidden&&document.hasFocus()&&Date.now()>=criticalUntil;
+ if(!eligible||!hint||(!$("#mission-reminder").hidden&&$("#mission-reminder-text").textContent!==hint))hideMissionReminder();
+ if(reminders.level!==level)hideMissionReminder();
+ if(reminders.poll(activityClock.sessionMs,level,eligible)&&hint){
+  $("#mission-reminder-text").textContent=hint;$("#mission-reminder").hidden=false;clearTimeout(reminderTimeout);reminderTimeout=setTimeout(hideMissionReminder,18000);
+ }
+}
 let activityClock=new ActivityClock(state.activity);
 let lastActivitySave=performance.now();
 function updateActivity(){
@@ -147,12 +162,14 @@ function updateActivity(){
   const d=dayPhase();$("#day-time").textContent=`${d.time} · ${d.label}`;
   document.documentElement.dataset.dayPhase=d.phase;
   if(now-lastActivitySave>=15000){saveState(state);lastActivitySave=now}
+  updateMissionReminder();
 }
 setInterval(updateActivity,1000);
 for(const name of ['visibilitychange','focus','blur'])window.addEventListener(name,updateActivity);
 window.addEventListener('pagehide',()=>{activityClock.tick(performance.now(),false);saveState(state)});
 updateActivity();
 function persist() {
+  completeSchoolTyping(state,content);
   reconcile(state, content);
   saveState(state);
   world?.sync(state);
@@ -200,6 +217,7 @@ function renderHud() {
     .querySelector('[data-page="map"]')
     .classList.toggle("current-goal", activeGoal?.id === "eco-map");
   $("#tools-toggle").classList.toggle("current-goal",!!activeGoal?.ui);
+  updateMissionReminder();
 }
 function levelGate(n) {
   if (canEnterLevel(state, n)) return true;
@@ -1411,13 +1429,13 @@ function guardianOverview() {
       current === 5
         ? "우리 동네 수호대 · 미션 성공!"
         : "레벨 1부터 차례로 · 우리 동네 수호대",
-      `<div class="guardian-summary ${current === 5 ? "complete" : ""}"><h3>${current === 5 ? "축하해요! 네 레벨을 마치고 우리 동네 수호대가 되었어요." : `지금은 레벨 ${current}이에요. 빛나는 곳부터 시작해요.`}</h3><p>마을 · 이야기 · 생태 스탬프 ${earned.length} / 3</p></div><div class="cards">${levels.map((l) => `<article class="card"><span class="badge">레벨 ${l.id} · ${l.id < current ? "✓ 완료" : l.id === current ? "지금 도전" : "잠김"}</span><h3>${h(l.title)}</h3><p>${h(l.description)}</p><button data-stage="${l.id}">${l.id > current ? "앞 레벨부터 완료해 주세요" : "활동 확인하기"}</button></article>`).join("")}</div><div class="stamp-strip">${guardianStamps.map((s) => `<span class="badge">${earned.includes(s.id) ? "✓" : "○"} ${h(s.name)}</span>`).join("")}</div>${state.journey.briefingRead ? '<button id="weekly-again">이번 주 실천 체크 이어 쓰기</button>' : ""}`,
+      `<div class="guardian-summary ${current === 5 ? "complete" : ""}"><h3>${current === 5 ? "축하해요! 네 레벨을 마치고 우리 동네 수호대가 되었어요." : `지금은 레벨 ${current}이에요. 빛나는 곳부터 시작해요.`}</h3><p>마을 · 이야기 · 생태 스탬프 ${earned.length} / 3</p></div><div class="cards">${levels.map((l) => `<article class="card"><span class="badge">레벨 ${l.id} · ${l.id < current ? "✓ 완료" : l.id === current ? "지금 도전" : "잠김"}</span><h3>${h(l.title)}</h3><p>${h(l.description)}</p><button data-stage="${l.id}">${l.id > current ? "앞 레벨부터 완료해 주세요" : "활동 확인하기"}</button></article>`).join("")}</div><div class="stamp-strip">${guardianStamps.map((s) => `<span class="badge">${earned.includes(s.id) ? "✓" : "○"} ${h(s.name)}</span>`).join("")}</div>${state.journey.schoolReady ? '<button id="rules-again">학급 규칙 다시 보기</button>' : ""}`,
       "wide",
     );
   r.querySelectorAll("[data-stage]").forEach(
     (b) => (b.onclick = () => levelAction(+b.dataset.stage)),
   );
-  r.querySelector("#weekly-again")?.addEventListener("click", board);
+  r.querySelector("#rules-again")?.addEventListener("click", board);
 }
 function chooseImage() {
   if (levelGate(4)) $("#image-input").click();
@@ -1523,7 +1541,7 @@ function welcome() {
   const root = open(
     "금산마을에 오신 걸 환영해요",
     `<div class="welcome-banner"><span class="eyebrow">4-4반 마을 탐험 안내</span><h2 class="welcome-title">우리 동네 수호대가 되자!</h2><p>먼저 <b>세 가지 미션</b>을 차례로 해 봐요. 처음에는 학교에서 시작해요.</p><div class="mission-briefings">
-    <article class="mission-briefing"><span>미션 1 · 레벨 1</span><h3>우리 반 약속 익히기</h3><p>학교 칠판에서 9월 학급 회의 규칙을 읽고 한 줄씩 따라 써요. 이번 주에 지킬 약속과 실천 체크도 남겨요.</p></article>
+    <article class="mission-briefing"><span>미션 1 · 레벨 1</span><h3>우리 반 약속 익히기</h3><p>학교 칠판에서 9월 학급 회의 규칙 네 줄을 읽고 타자로 따라 써요. 네 줄을 모두 맞히면 바로 미션 클리어!</p></article>
     <article class="mission-briefing"><span>미션 2 · 레벨 2</span><h3>학교에서 아파트까지 안전하게!</h3><p>끊어진 점자블록을 잇고 길을 막은 물건을 치워요. 주운 쓰레기는 가방에서 알맞게 분류해요.</p></article>
     <article class="mission-briefing"><span>미션 3 · 레벨 3</span><h3>금호지의 두 용 이야기</h3><p>금호지 동화책을 끝까지 읽고 퀴즈에 도전해요. 동물 친구들의 이야기도 들어 봐요.</p></article></div>
     <p class="briefing-finale"><b>마무리 · 레벨 4, 우리 반 생태 지도</b><br>세 미션 뒤에는 내 그림·생물 이름·보호 약속을 생태 지도에 등록해요. <b>마을·이야기·생태 스탬프 3개</b>를 모두 모으면 우리 동네 수호대 성공!</p></div>
@@ -1533,9 +1551,10 @@ function welcome() {
     state.welcomed = true;
     state.guardian.introSeen = true;
     state.journey.introSeen = true;
-    state.journey.introRevision = 2;
+    state.journey.introRevision = 3;
     persist();
     close();
+    updateActivity();
   };
 }
 function interact(id) {
@@ -1671,7 +1690,7 @@ try {
     );
   }
   $("#loading").remove();
-  if (!state.welcomed || !state.journey.introSeen || state.journey.introRevision !== 2) welcome();
+  if (!state.welcomed || !state.journey.introSeen || state.journey.introRevision !== 3) welcome();
   setInterval(() => {
     drawMap($("#mini"));
     if (!world.indoor) {

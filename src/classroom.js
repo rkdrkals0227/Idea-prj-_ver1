@@ -12,6 +12,13 @@ export function copyRule(state,id,text,content) {
   if(normalizeRule(text)!==expected && normalizeRule(withoutList)!==expected)return false;
   state.journey.ruleCopies ||= {};
   state.journey.ruleCopies[id]=rule.text;
+  completeSchoolTyping(state,content);
+  return true;
+}
+export function completeSchoolTyping(state,content){
+  if(!content.classRules?.rules.length || !rulesComplete(state,content))return false;
+  state.journey.schoolReady=true;
+  state.journey.briefingRead=true;
   return true;
 }
 export function validateClassRules(value) {

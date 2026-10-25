@@ -6,9 +6,10 @@ export function naturalTerrain(group) {
  const grad=ctx.createLinearGradient(0,0,c.width,c.height);grad.addColorStop(0,'#aebf83');grad.addColorStop(.5,'#bbcc91');grad.addColorStop(1,'#9fb981');ctx.fillStyle=grad;ctx.fillRect(0,0,c.width,c.height);
  for(let i=0;i<150;i++){const x=random()*c.width,y=random()*c.height,r=30+random()*110,g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,i%2?'#d7ddaa40':'#789b5b28');g.addColorStop(1,'#acc78900');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2)}
  const point=([x,z])=>[(x+33)*sx,(z+28)*sy];
- function trail(points,width){ctx.lineCap='round';ctx.lineJoin='round';for(const [w,color] of [[width+.6,'#a6b77b80'],[width+.25,'#c3c69a'],[width,'#d8c9a6'],[width-.5,'#ddcfae']]){ctx.beginPath();points.forEach((p,i)=>{const [x,y]=point(p);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y)});ctx.strokeStyle=color;ctx.lineWidth=w*sx;ctx.stroke()}}
- trail([[-24,3],[-14,2.9],[-3,3.15],[10,3],[19,3.1],[26,3]],4);
- trail([[1,-18],[1.15,-8],[1,2],[1.1,13]],4);trail([[-10,-5],[-10,0],[-9.8,3]],2.8);trail([[10,-10],[18,-10],[26,-10]],2.7);
+ function trail(points,width){ctx.lineCap='round';ctx.lineJoin='round';for(const [w,color] of [[width+.3,'#b5bc9480'],[width,'#d4c5a5'],[width-.15,'#d8c9aa']]){ctx.beginPath();points.forEach((p,i)=>{const [x,y]=point(p);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y)});ctx.strokeStyle=color;ctx.lineWidth=w*sx;ctx.stroke()}}
+ trail([[-24,3.05],[26,3.05]],3.6);
+ trail([[1,-6],[1,3.05],[1,8]],2.8);trail([[-10,-1],[-10,3.05]],2.6);
+ trail([[1,-6],[5,-6],[8,-10],[26,-10]],2.4);
  // The repaired route follows the main school-to-apartment road.
  for(let i=0;i<16000;i++){const x=random()*c.width,y=random()*c.height;ctx.strokeStyle=i%3?'#75955712':'#fff5d31b';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(random()-.5)*3,y-1-random()*2);ctx.stroke()}
  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;

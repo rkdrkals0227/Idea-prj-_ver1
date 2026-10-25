@@ -6,15 +6,13 @@ test('September chalkboard has four inline copies, safe Korean input and a singl
  await expect(page.locator('.sidebar')).toBeHidden();await expect(page.locator('#activity-time')).toBeVisible();
  await act(page,-10,-1,'학교');await act(page,0,-4,'회의');
  await expect(page.locator('.class-chalkboard')).toContainText('9월');await expect(page.locator('[data-rule-input]')).toHaveCount(4);
- await expect(page.locator('#read-meeting')).toBeDisabled();
+ await expect(page.locator('#school-next')).toBeDisabled();
  const pos=await inspect(page,m=>m.world.player.position.toArray());
- await page.locator('[data-rule-input]').first().fill('말로 풀기');await page.locator('[data-copy-check]').first().click();
- await expect(page.locator('[data-copy-feedback]').first()).toContainText('다시');
+ await page.locator('[data-rule-input]').first().fill('말로 풀기');
+ await expect(page.locator('[data-copy-feedback]').first()).toContainText('윗줄');
  await page.locator('[data-rule-input]').first().press('w');expect(await inspect(page,m=>m.world.player.position.toArray())).toEqual(pos);
  const rules=await inspect(page,m=>m.content.classRules.rules);
- for(const r of rules){await page.locator(`[data-rule-input="${r.id}"]`).fill(r.text);await page.locator(`[data-copy-check="${r.id}"]`).click()}
- await expect(page.locator('#read-meeting')).toBeEnabled();await page.locator('#read-meeting').click();
- await page.locator('[name="promise"]').fill('친구에게 차분히 말하기');await page.locator('[name="done"]').check();await page.getByRole('button',{name:'계획과 오늘 체크 저장'}).click();
+ for(const r of rules){await page.locator(`[data-rule-input="${r.id}"]`).fill(r.text)}
  expect(await inspect(page,m=>m.state.journey.schoolReady)).toBe(true);
  await page.reload();expect(await inspect(page,m=>Object.keys(m.state.journey.ruleCopies).length)).toBe(4);
 });
@@ -54,12 +52,10 @@ test('day night is readable, tools collapse and foreground time total restores',
  await page.bringToFront();await other.close();
  const before=await inspect(page,m=>m.state.activity.totalMs);await page.reload();expect(await inspect(page,m=>m.state.activity.totalMs)).toBeGreaterThanOrEqual(before);
 });
-test('partly read old school save enables planning immediately after new rule copies',async({page})=>{
+test('partly read old school save finishes with typing alone',async({page})=>{
  await start(page);await inspect(page,m=>{m.state.journey.briefingRead=true});
  await act(page,-10,-1,'학교');await act(page,0,-4,'회의');
- await expect(page.locator('#weekly-form [name=promise]')).toBeDisabled();
+ await expect(page.locator('#weekly-form')).toHaveCount(0);
  const {copyRules}=await import('./helpers.js');await copyRules(page);
- await expect(page.locator('#weekly-form [name=promise]')).toBeEnabled();
- await page.locator('[name="promise"]').fill('친구를 방해하지 않기');await page.locator('[name="done"]').check();await page.getByRole('button',{name:'계획과 오늘 체크 저장'}).click();
  expect(await inspect(page,m=>m.state.journey.schoolReady)).toBe(true);
 });
