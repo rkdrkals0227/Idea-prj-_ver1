@@ -1,0 +1,143 @@
+[
+  {
+    "id": "turtle-walk",
+    "sourceFile": "03_ npc_남생이_ 걷기.glb",
+    "originalBytes": 28821088,
+    "webBytes": 765380,
+    "animations": [
+      "Running",
+      "Walking"
+    ]
+  },
+  {
+    "id": "turtle-greet",
+    "sourceFile": "03_npc_ 남생이_ 인사.glb",
+    "originalBytes": 29011752,
+    "webBytes": 955896,
+    "animations": [
+      "Running",
+      "Walking",
+      "Big_Wave_Hello"
+    ]
+  },
+  {
+    "id": "turtle-idle",
+    "sourceFile": "03_npc_남생이 정지.glb",
+    "originalBytes": 22782500,
+    "webBytes": 191196,
+    "animations": []
+  },
+  {
+    "id": "crane-greet",
+    "sourceFile": "04_npc_ 학 인사.glb",
+    "originalBytes": 21767596,
+    "webBytes": 1675728,
+    "animations": [
+      "Running",
+      "Walking",
+      "Big_Wave_Hello",
+      "Idle_15"
+    ]
+  },
+  {
+    "id": "crane-walk",
+    "sourceFile": "04_npc_학 걷기.glb",
+    "originalBytes": 21336632,
+    "webBytes": 1244912,
+    "animations": [
+      "Running",
+      "Walking"
+    ]
+  },
+  {
+    "id": "lamp",
+    "sourceFile": "10_시설물_가로등.glb",
+    "originalBytes": 19501120,
+    "webBytes": 190484,
+    "animations": []
+  },
+  {
+    "id": "bench",
+    "sourceFile": "11_시설물_벤치.glb",
+    "originalBytes": 23303716,
+    "webBytes": 222588,
+    "animations": []
+  },
+  {
+    "id": "sign",
+    "sourceFile": "12_시설물_안내표지판.glb",
+    "originalBytes": 22802268,
+    "webBytes": 200556,
+    "animations": []
+  },
+  {
+    "id": "tactile",
+    "sourceFile": "14_바닥_점자블록.glb",
+    "originalBytes": 16931624,
+    "webBytes": 209080,
+    "animations": []
+  },
+  {
+    "id": "tactile-broken",
+    "sourceFile": "15_바닥_점자블록 깨진 거.glb",
+    "originalBytes": 20195732,
+    "webBytes": 216516,
+    "animations": []
+  },
+  {
+    "id": "paving",
+    "sourceFile": "16_바닥_보도블럭.glb",
+    "originalBytes": 14796504,
+    "webBytes": 99688,
+    "animations": []
+  },
+  {
+    "id": "waste-paper",
+    "sourceFile": "18_1_구겨진 종이 쓰레기.glb",
+    "originalBytes": 23507732,
+    "webBytes": 154744,
+    "animations": []
+  },
+  {
+    "id": "grass",
+    "sourceFile": "17_바닥_잔디 타일.glb",
+    "originalBytes": 26031144,
+    "webBytes": 123816,
+    "animations": []
+  },
+  {
+    "id": "waste-bottle",
+    "sourceFile": "18_2_버려진 물병.glb",
+    "originalBytes": 16933376,
+    "webBytes": 180016,
+    "animations": []
+  },
+  {
+    "id": "waste-can",
+    "sourceFile": "18_3_ 버려진 캔.glb",
+    "originalBytes": 24983392,
+    "webBytes": 246208,
+    "animations": []
+  },
+  {
+    "id": "waste-wrapper",
+    "sourceFile": "18_4_ 버려진 과자 봉지.glb",
+    "originalBytes": 19647380,
+    "webBytes": 226096,
+    "animations": []
+  },
+  {
+    "id": "water",
+    "sourceFile": "20_바닥_물 타일.glb",
+    "originalBytes": 17670116,
+    "webBytes": 132888,
+    "animations": []
+  },
+  {
+    "id": "lotus-water",
+    "sourceFile": "19_바닥_연꽃 잎 있는 물 타일.glb",
+    "originalBytes": 26916504,
+    "webBytes": 166160,
+    "animations": []
+  }
+]

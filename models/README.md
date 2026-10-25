@@ -1,4 +1,10 @@
-이 폴더에 실제 모델 파일을 넣으세요. 현재 업로드된 모델은 없습니다.
-GLB 권장. glTF는 .bin과 텍스처 폴더의 상대 경로 구조를 유지하세요.
-연결: src/data/asset-manifest.json의 역할별 url을 models/school.glb처럼 설정합니다.
-자세한 내용은 프로젝트 README.md와 docs/MODELS.md를 확인하세요.
+# 금산마을 모델
+
+현재 연결한 파일은 `uploaded/` 아래의 최적화된 18개 GLB입니다.
+`uploaded/provenance.json`에 원본 첨부 파일명, 파일 크기, 클립 이름을 기록했습니다.
+
+설정: `src/data/asset-manifest.json`
+자세한 역할 대응과 32MiB 초과로 아직 받지 못한 12개 파일: `docs/MODELS.md`
+
+새 GLB/glTF는 이 폴더에 넣고 public 기준 상대 경로를 설정합니다.
+glTF 외부 텍스처/버퍼는 원래 상대 경로를 유지합니다.
