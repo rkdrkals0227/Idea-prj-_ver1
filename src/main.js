@@ -458,13 +458,13 @@ function placeStory(id) {
   }
 }
 function facility(context) {
-  if (!levelGate(context === "house" ? 2 : 3)) return;
+  if (context === "house" && !levelGate(2)) return;
   const title =
     context === "house" ? "아파트 생활 안내" : "마을 우체통 · 마음을 전해요";
   const d = content.dialogues[context];
   const r = open(
     title,
-    `<p class="small">마을 활동 안내</p><p>${h(d.story)}</p><div class="stack"><button id="story">${h(residentThemes[context].title)}</button><button id="quiz">이 주제의 퀴즈</button>${context === "house" ? '<button id="help">주택가 정리 활동</button>' : '<button id="write-letter" class="primary">편지 쓰기 · 이어 쓰기</button>'}</div>`,
+    `${context === "postman" ? '<section class="card mailbox-community" aria-labelledby="community-mail-title"><h3 id="community-mail-title">우리 동네를 더 좋게 만드는 생각을 전해요</h3><p>우리 동네에서 불편한 곳이나 더 좋아졌으면 하는 점을 발견했나요? 아래 진주시 누리집에서 여러분의 생각을 글로 남길 수 있어요.</p><p>어디가 불편한지, 어떻게 바뀌면 좋을지 차근차근 적어 보세요.</p><a id="community-mail-link" class="primary mailbox-link" href="https://www.jinju.go.kr/00132/00379/00393.web" target="_blank" rel="noopener noreferrer">진주시 누리집에서 의견 남기기 ↗</a><p class="small">실제 진주시 누리집이 새 탭으로 열려요. 글을 올리기 전에는 선생님이나 보호자와 함께 확인해요. 게임 속 편지는 자동으로 보내지지 않아요.</p></section>' : ''}<p class="small">${context === "postman" ? "게임 속 편지와 이야기" : "마을 활동 안내"}</p><p>${h(d.story)}</p><div class="stack"><button id="story">${h(residentThemes[context].title)}</button><button id="quiz">이 주제의 퀴즈</button>${context === "house" ? '<button id="help">주택가 정리 활동</button>' : '<button id="write-letter" class="primary">게임 속 편지 쓰기 · 이어 쓰기</button>'}</div>`,
   );
   r.querySelector("#story").onclick = () => {
     const card = open(
