@@ -23,7 +23,7 @@ export function loadState() {
       : initialState();
   } catch {
     report(
-      "저장 기록을 읽지 못했어요. 원본 기록은 지우지 않았어요. 자료를 내보내 보관해 주세요.",
+      "이전 설정을 읽지 못해 기본 설정을 사용해요. 이번 게임은 처음부터 시작해요.",
     );
     return initialState();
   }

@@ -114,11 +114,12 @@ test("residents introduce themselves once and keep distinct scoped story and qui
   }
   await expect(page.locator("[data-review]")).toHaveCount(3);
   await close(page);
-  await page.reload();
+  await page.reload();await page.locator('#start').click();
+  expect(await page.evaluate(async()=>{const m=await import([...document.scripts].find(s=>s.src.includes('/src/main.js')).src);return m.state.quiz})).toEqual([]);
   await act(page, 4, 8, "우체통", false);
   await expect(page.locator("#intro-next")).toHaveCount(0);
   await page.locator("#quiz").click();
-  await expect(page.locator(".modal-header h2")).toContainText("주제 마무리");
+  await expect(page.locator(".modal-body")).toContainText("레벨 1");
 });
 
 test("library, forest and apartment have own learning; letters save, escape HTML and only submit in game", async ({
@@ -147,7 +148,7 @@ test("library, forest and apartment have own learning; letters save, escape HTML
   await page.locator('[name="alias"]').fill("초록이");
   await page.locator('[name="free"]').fill("<script>마음을 전해요</script>");
   await page.getByRole("button", { name: "초안 저장", exact: true }).click();
-  await page.reload();
+  await close(page);
   await openTools(page);
   await page.locator('[data-page="bag"]').click();
   await page.getByRole("button", { name: "편지 이어 쓰기" }).click();
@@ -168,7 +169,7 @@ test("library, forest and apartment have own learning; letters save, escape HTML
           )
         ).state.letters.length,
     ),
-  ).toBe(1);
+  ).toBe(0);
 });
 
 test("optional lake care requires cleanup, identification and expert handover without replacing legend", async ({
@@ -233,12 +234,11 @@ test("teacher edits and invalid quiz validation persist while WebGL loss shows r
     "저장하지 않았어요",
   );
   await close(page);
-  await page.reload();
+  await page.reload();await page.locator('#start').click();
+  expect(await page.evaluate(async()=>{const m=await import([...document.scripts].find(s=>s.src.includes('/src/main.js')).src);return m.content.className})).toBe('4학년 초록별반');
   await act(page, -10, -1, "들어가기");
   await act(page, 0, -3.8, "회의");
-  await expect(
-    page.getByRole("heading", { name: /4학년 초록별반/ }),
-  ).toBeVisible();
+  await expect(page.locator('.class-chalkboard')).toBeVisible();
   await close(page);
   await page.evaluate(async () => {
     (

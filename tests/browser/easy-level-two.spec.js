@@ -11,7 +11,7 @@ test('third village pickup immediately opens sorting, wrong answers retry and le
  await act(page,10,5);await expect(page.locator('[data-auto-sorting]')).toHaveCount(0);await act(page,13,8);await expect(page.locator('[data-auto-sorting]')).toHaveCount(0);await act(page,16,5);
  await expect(page.locator('[data-auto-sorting]')).toBeVisible();await expect(page.getByRole('dialog')).toContainText('3개');await page.locator('[data-sort="can"][data-category="종이"]').click();await expect(page.locator('.result').first()).toContainText('금속');
  for(const [id,c] of [['can','금속'],['paper','종이'],['bottle','플라스틱']])await page.locator(`[data-sort="${id}"][data-category="${c}"]`).click();
- await expect(page.locator('#sorting-success')).toContainText('레벨 2 클리어');expect(await inspect(page,m=>m.state.sorted.filter(id=>['can','paper','bottle'].includes(id)).length)).toBe(3);await close(page);await page.reload();await expect(page.locator('#level-title')).toContainText('레벨 3');
+ await expect(page.locator('#sorting-success')).toContainText('레벨 2 클리어');expect(await inspect(page,m=>m.state.sorted.filter(id=>['can','paper','bottle'].includes(id)).length)).toBe(3);await expect(page.locator('#level-title')).toContainText('레벨 3');await close(page);await page.reload();await expect(page.locator('#level-title')).toContainText('레벨 1');
 });
 
 test('custom dot route describes the matching pattern accessibly and skips direction',async({page})=>{

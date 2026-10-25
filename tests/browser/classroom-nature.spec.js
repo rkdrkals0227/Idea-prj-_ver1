@@ -14,7 +14,7 @@ test('September chalkboard has four inline copies, safe Korean input and a singl
  const rules=await inspect(page,m=>m.content.classRules.rules);
  for(const r of rules){await page.locator(`[data-rule-input="${r.id}"]`).fill(r.text)}
  expect(await inspect(page,m=>m.state.journey.schoolReady)).toBe(true);
- await page.reload();expect(await inspect(page,m=>Object.keys(m.state.journey.ruleCopies).length)).toBe(4);
+ await page.reload();expect(await inspect(page,m=>Object.keys(m.state.journey.ruleCopies).length)).toBe(0);
 });
 test('lake click opens illustrated book after level2 and reading all pages unlocks quiz',async({page})=>{
  test.setTimeout(120000);await page.setViewportSize({width:1200,height:900});
@@ -37,7 +37,7 @@ test('guided road repair updates the actual full-length world path',async({page}
  const result=await inspect(page,m=>({path:m.state.path,broken:m.world.brokenTile.visible,fixed:m.world.fixedTile.visible,count:m.world.tactileRoute.length}));
  expect(result).toEqual({path:true,broken:false,fixed:true,count:38});
 });
-test('day night is readable, tools collapse and foreground time total restores',async({page})=>{
+test('day night is readable, tools collapse and foreground time resets on reload',async({page})=>{
  test.setTimeout(120000);
  // Playwright forces every tab to report focus by default; restore native tab focus.
  const focusSession=await page.context().newCDPSession(page);await focusSession.send('Emulation.setFocusEmulationEnabled',{enabled:false});
@@ -51,7 +51,7 @@ test('day night is readable, tools collapse and foreground time total restores',
  await expect.poll(()=>page.evaluate(()=>document.hasFocus())).toBe(false);
  await other.waitForTimeout(1000);const paused=await inspect(page,m=>m.state.activity.totalMs);await other.waitForTimeout(1500);expect(await inspect(page,m=>m.state.activity.totalMs)).toBe(paused);
  await page.bringToFront();await other.close();
- const before=await inspect(page,m=>m.state.activity.totalMs);await page.reload();expect(await inspect(page,m=>m.state.activity.totalMs)).toBeGreaterThanOrEqual(before);
+ await page.reload();expect(await inspect(page,m=>m.state.activity.totalMs)).toBe(0);
 });
 test('partly read old school save finishes with typing alone',async({page})=>{
  await start(page);await inspect(page,m=>{m.state.journey.briefingRead=true});

@@ -9,7 +9,7 @@ test('level1 has only typing and clears immediately after final committed Korean
  await page.locator(`[data-rule-input="${rules[3].id}"]`).evaluate((el,text)=>{el.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));el.value=text;el.dispatchEvent(new InputEvent('input',{bubbles:true,isComposing:true}))},rules[3].text);
  expect(await inspect(page,m=>m.state.journey.schoolReady)).toBe(false);
  await page.locator(`[data-rule-input="${rules[3].id}"]`).dispatchEvent('compositionend');await expect(page.locator('#school-feedback')).toContainText('미션 클리어');await expect(page.locator('#level-title')).toContainText('레벨 2');
- await page.reload();await expect(page.locator('#level-title')).toContainText('레벨 2');expect(await inspect(page,m=>m.state.journey.checks)).toEqual({});
+ await page.reload();await expect(page.locator('#level-title')).toContainText('레벨 1');expect(await inspect(page,m=>m.state.journey.checks)).toEqual({});
 });
 test('minute status says where and how, pauses in typing modal and uses the new level',async({page})=>{
  test.setTimeout(120000);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.clock.install();await start(page);await page.clock.fastForward(61000);

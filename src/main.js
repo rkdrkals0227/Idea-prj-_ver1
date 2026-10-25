@@ -1,3 +1,4 @@
+import {freshRun} from './play-session.js';
 import {showLibrary} from './library.js';
 import {showRoadIntro} from './road-intro.js';
 import {hasReadRoadIntro,readRoadPage} from './road-reading.js';
@@ -130,7 +131,7 @@ function open(title, html, width = "") {
 }
 const ui = { open, close, toast };
 setStorageReporter((message) => toast(message, true));
-state = loadState();
+state = freshRun(loadState());
 content = upgradeQuizContent(loadContent(defaults));
 try {
   validateState(state);
@@ -139,10 +140,11 @@ try {
   state = initialState();
   content = structuredClone(defaults);
   toast(
-    "저장 자료 형식을 읽지 못했어요. 원본은 자동으로 지우지 않았어요. 백업 파일을 확인하거나 다른 브라우저에서 열어 주세요.",
+    "교사 자료 형식을 읽지 못해 예시 자료로 시작했어요. 교사용 JSON 파일을 확인해 다시 가져와 주세요.",
     true,
   );
 }
+saveState(state);
 if(!isGuardian(state))state.journey.sessionEnded=false;
 function setTools(visible){const nav=$("#explore-tools");if(!nav)return;nav.hidden=!visible;$("#tools-toggle").setAttribute("aria-expanded",String(visible));}
 $("#tools-toggle").onclick=()=>setTools($("#explore-tools").hidden);
@@ -606,7 +608,7 @@ function letter() {
   const d = state.letterDraft;
   const root = open(
     "마을 우체통 · 마음을 전해요",
-    `<p class="notice">게임 속 접수만 해요. 실제 이메일이나 민원은 보내지 않아요. 초안은 선생님과 함께 확인해 주세요.</p><form id="letter"><label>편지 유형<select name="type">${["문제 해결 제안", "주민에게 감사", "우리 동네 소개"].map((t) => `<option ${d.type === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>${[
+    `<p class="notice">게임 속 접수만 해요. 실제 이메일이나 민원은 보내지 않아요. 초안은 선생님과 함께 확인해 주세요. 새로고침하면 연습 내용이 초기화되니, 간직하려면 미리보기에서 텍스트 파일로 저장해요.</p><form id="letter"><label>편지 유형<select name="type">${["문제 해결 제안", "주민에게 감사", "우리 동네 소개"].map((t) => `<option ${d.type === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>${[
       ["recipient", "받는 대상", "예: 마을 주민 여러분"],
       [
         "problem",
@@ -963,7 +965,7 @@ function teacher() {
       .map(([k, v]) => `<option value="${k}">${v}</option>`)
       .join(
         "",
-      )}</select></label><textarea id="json-editor" class="code" spellcheck="false" aria-label="수업 자료 JSON"></textarea><div class="actions"><button id="save" class="primary">자료 저장</button><button id="export">수업 자료 JSON 내보내기</button><button id="import">수업 자료 JSON 가져오기</button><button id="reset">예시 자료로 되돌리기</button><button id="works">이전 작품 보관함</button></div><div id="teacher-result" aria-live="polite"></div><p class="notice">시설 배치·쓰레기 위치를 바꾸면 새로고침 뒤 마을에 반영돼요. 현재 활동 기록은 유지됩니다. 학급 공유 서버와 교사 계정 인증은 아직 연결하지 않았어요.</p>`,
+      )}</select></label><textarea id="json-editor" class="code" spellcheck="false" aria-label="수업 자료 JSON"></textarea><div class="actions"><button id="save" class="primary">자료 저장</button><button id="export">수업 자료 JSON 내보내기</button><button id="import">수업 자료 JSON 가져오기</button><button id="reset">예시 자료로 되돌리기</button><button id="works">이전 작품 보관함</button></div><div id="teacher-result" aria-live="polite"></div><p class="notice">시설 배치·쓰레기 위치는 새로고침 뒤 반영돼요. 교사 자료는 유지되고 게임은 1단계부터 시작해요. 학급 공유 서버와 교사 계정 인증은 아직 연결하지 않았어요.</p>`,
     "wide",
   );
   const fields = {
@@ -1049,7 +1051,7 @@ function settings() {
   const s = state.settings;
   const root = open(
     "나에게 맞는 탐험",
-    `<form id="settings"><label>화질<select name="quality"><option value="normal" ${s.quality === "normal" ? "selected" : ""}>보통</option><option value="low" ${s.quality === "low" ? "selected" : ""}>낮음 · 그림자 줄이기</option></select></label><label>글자 크기<select name="font"><option value="1" ${+s.font === 1 ? "selected" : ""}>기본</option><option value="1.15" ${+s.font === 1.15 ? "selected" : ""}>크게</option><option value="1.3" ${+s.font === 1.3 ? "selected" : ""}>더 크게</option></select></label><input type="hidden" name="artLimit" value="${s.artLimit}"><input type="hidden" name="displayName" value="${s.displayName}"><label class="check"><input name="motion" type="checkbox" ${s.motion ? "checked" : ""}>움직임·흔들림 줄이기</label><label class="check"><input name="sound" type="checkbox" ${s.sound ? "checked" : ""}>직접 만든 짧은 배경 선율 켜기</label><button class="primary">설정 적용</button></form><hr><p class="small">개인 체험판 · 이 브라우저에만 저장돼요. 다른 기기에는 자동 공유되지 않아요. 공개 기기에서 사용을 마치면 자료를 보관한 뒤 브라우저 사이트 데이터를 지워 주세요.</p><div class="actions"><button id="backup">개인 기록 백업</button><button id="restore">개인 기록 복원</button><button id="teacher">교사용 수업 편집</button><button id="welcome">시작 안내 다시 보기</button></div>`,
+    `<form id="settings"><label>화질<select name="quality"><option value="normal" ${s.quality === "normal" ? "selected" : ""}>보통</option><option value="low" ${s.quality === "low" ? "selected" : ""}>낮음 · 그림자 줄이기</option></select></label><label>글자 크기<select name="font"><option value="1" ${+s.font === 1 ? "selected" : ""}>기본</option><option value="1.15" ${+s.font === 1.15 ? "selected" : ""}>크게</option><option value="1.3" ${+s.font === 1.3 ? "selected" : ""}>더 크게</option></select></label><input type="hidden" name="artLimit" value="${s.artLimit}"><input type="hidden" name="displayName" value="${s.displayName}"><label class="check"><input name="motion" type="checkbox" ${s.motion ? "checked" : ""}>움직임·흔들림 줄이기</label><label class="check"><input name="sound" type="checkbox" ${s.sound ? "checked" : ""}>직접 만든 짧은 배경 선율 켜기</label><button class="primary">설정 적용</button></form><hr><p class="small">개인 체험판 · 새로고침하면 미션·스탬프·학생 입력 기록·활동 시간을 처음부터 시작해요. 화질·글자 설정과 교사 자료는 유지해요. 다른 기기에는 자동 공유되지 않아요. 공개 기기에서 사용을 마치면 자료를 보관한 뒤 브라우저 사이트 데이터를 지워 주세요.</p><div class="actions"><button id="backup">개인 기록 백업</button><button id="restore">개인 기록 복원</button><button id="teacher">교사용 수업 편집</button><button id="welcome">시작 안내 다시 보기</button></div>`,
   );
   root.querySelector("form").onsubmit = async (e) => {
     e.preventDefault();
@@ -1121,7 +1123,7 @@ function settings() {
           persist();
           applySettings();
           await refreshWorks();
-          if(isGuardian(state)){state.journey.sessionEnded?finishGame():showEnding()}else{close();toast("기록을 복원했어요. 배치 변경은 새로고침 뒤 반영돼요.")}
+          if(isGuardian(state)){state.journey.sessionEnded?finishGame():showEnding()}else{close();toast("이번 게임에 기록을 복원했어요. 새로고침하면 배치는 반영되고 미션은 처음부터 시작해요.")}
         } catch {
           toast("복원을 완료하지 못했어요. 저장 공간을 확인해 주세요.");
         }
@@ -1201,13 +1203,13 @@ function guardianOverview(){
  root.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>levelAction(+b.dataset.stage));
 }
 function showEnding(){
- const root=open('우리 동네 수호대 · 미션 성공!',`<div class="ending-card"><span class="ending-medal" aria-hidden="true">✦</span><p class="eyebrow">세 가지 미션 모두 완료!</p><h3>정말 잘했어요!<br>우리 동네 수호대가 되었어요.</h3><p>우리 반의 약속을 익히고, 안전한 길을 만들고,<br>금호지의 이야기도 배웠어요.</p><p>${h(content.guardianLegend.quiz.explanation)}</p><div class="stamp-strip">${guardianStamps.map(s=>`<span class="badge">✓ ${h(s.name)}</span>`).join('')}</div><p>생활에서도 약속을 지키고 우리 동네를 아껴 주세요!</p><button id="finish-game" class="primary">오늘 탐험 마치기</button><div class="actions"><button id="ending-library">도서관 책 더 읽기</button><button id="ending-walk">마을 더 둘러보기</button></div></div>`,'wide');
- root.querySelector('#finish-game').onclick=finishGame;root.querySelector('#ending-library').onclick=()=>books();root.querySelector('#ending-walk').onclick=close;
+ const root=open('우리 동네 수호대 · 미션 성공!',`<div class="ending-card"><span class="ending-medal" aria-hidden="true">✦</span><p class="eyebrow">세 가지 미션 모두 완료!</p><h3>정말 잘했어요!<br>우리 동네 수호대가 되었어요.</h3><p>우리 반의 약속을 익히고, 안전한 길을 만들고,<br>금호지의 이야기도 배웠어요.</p><p>${h(content.guardianLegend.quiz.explanation)}</p><div class="stamp-strip">${guardianStamps.map(s=>`<span class="badge">✓ ${h(s.name)}</span>`).join('')}</div><p>생활에서도 약속을 지키고 우리 동네를 아껴 주세요!</p><button id="finish-game" class="primary">오늘 탐험 마치기</button><button id="restart-game">처음부터 다시 하기</button><div class="actions"><button id="ending-library">도서관 책 더 읽기</button><button id="ending-walk">마을 더 둘러보기</button></div></div>`,'wide');
+ root.querySelector('#restart-game').onclick=()=>location.reload();root.querySelector('#finish-game').onclick=finishGame;root.querySelector('#ending-library').onclick=()=>books();root.querySelector('#ending-walk').onclick=close;
 }
 function finishGame(){
  state.journey.sessionEnded=true;persist();updateActivity();
- const root=open('오늘 탐험 끝! 정말 잘했어요',`<div class="ending-card"><span class="ending-medal" aria-hidden="true">✦</span><h3>수고했어요, 우리 동네 수호대!</h3><p>세 미션을 모두 마쳤고, 기록도 저장했어요.<br>이제 이 창을 닫고 쉬어도 좋아요.</p><p class="small">탐험을 마친 동안에는 활동 시간이 늘어나지 않아요.</p><button id="resume-explore" class="primary">다시 마을 둘러보기</button></div>`,'wide');
- modal.querySelector('.close').hidden=true;root.querySelector('#resume-explore').onclick=()=>{state.journey.sessionEnded=false;persist();close();updateActivity()};root.querySelector('#resume-explore').focus();
+ const root=open('오늘 탐험 끝! 정말 잘했어요',`<div class="ending-card"><span class="ending-medal" aria-hidden="true">✦</span><h3>수고했어요, 우리 동네 수호대!</h3><p>세 미션을 모두 마쳤어요!<br>이제 이 창을 닫고 쉬어도 좋아요. 다시 도전하려면 아래 버튼을 눌러요.</p><p class="small">탐험을 마친 동안에는 활동 시간이 늘어나지 않아요.</p><div class="actions"><button id="restart-game" class="primary">처음부터 다시 하기</button><button id="resume-explore">이 마을 더 둘러보기</button></div></div>`,'wide');
+ modal.querySelector('.close').hidden=true;root.querySelector('#restart-game').onclick=()=>location.reload();root.querySelector('#resume-explore').onclick=()=>{state.journey.sessionEnded=false;persist();close();updateActivity()};root.querySelector('#resume-explore').focus();
 }
 function openLakeBook(){
   if(!levelGate(3))return;
@@ -1305,7 +1307,7 @@ function welcome() {
     <article class="mission-briefing"><span>미션 2 · 레벨 2</span><h3>학교에서 아파트까지 안전하게!</h3><p>끊어진 점자블록을 잇고 길을 막은 물건을 치워요. 점자블록 설명을 먼저 읽어요. 쓰레기 세 개를 모으면 분리배출 화면이 바로 열려요.</p></article>
     <article class="mission-briefing"><span>미션 3 · 레벨 3</span><h3>금호지의 두 용 이야기</h3><p>금호지 동화책을 끝까지 읽고 퀴즈에 도전해요. 동물 친구들의 이야기도 들어 봐요.</p></article></div>
     <p class="briefing-finale"><b>세 미션을 모두 마치면 탐험 끝!</b><br>약속·마을·이야기 스탬프 세 개를 모으면 칭찬 화면이 나와요. ‘오늘 탐험 마치기’를 눌러 마무리해요. 도서관의 진주 이야기 다섯 권은 언제든 자유롭게 읽을 수 있어요.</p></div>
-    <p class="small">진주시 금산면을 모티브로 한 수업용 축약 마을이에요. 동물 주민은 가상의 친구예요.<br>학급 규칙: ${h(content.classRules.source)}.</p><p class="notice">학교 문에서 <b>E키</b>로 들어가요. 이동은 WASD/방향키, 지도·가방은 ‘탐험 도구’에서 열어요. 기록은 이 브라우저에 저장돼요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`, "wide",
+    <p class="small">진주시 금산면을 모티브로 한 수업용 축약 마을이에요. 동물 주민은 가상의 친구예요.<br>학급 규칙: ${h(content.classRules.source)}.</p><p class="notice">학교 문에서 <b>E키</b>로 들어가요. 이동은 WASD/방향키, 지도·가방은 ‘탐험 도구’에서 열어요. 새로고침하거나 ‘처음부터 다시 하기’를 누르면 미션과 활동 시간을 처음부터 시작해요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`, "wide",
   );
   root.querySelector("#start").onclick = () => {
     state.welcomed = true;
@@ -1429,7 +1431,7 @@ try {
     world.setPaused(true);
     open(
       "화면 연결이 잠시 끊겼어요",
-      '<p>진행 기록은 저장되어 있어요. 다른 그래픽 프로그램을 닫고 이 페이지를 새로고침해 주세요.</p><button onclick="location.reload()">새로고침</button>',
+      '<p>다른 그래픽 프로그램을 닫고 이 페이지를 새로고침해 주세요. 새로고침하면 미션은 1단계부터 시작해요.</p><button onclick="location.reload()">새로고침</button>',
     );
   });
   applySettings();
@@ -1469,4 +1471,4 @@ try {
   r.querySelector("#retry").onclick = () => location.reload();
   console.error(e);
 }
-export { world, state, content, works, validateContent };
+export { world, state, content, works, validateContent, persist };

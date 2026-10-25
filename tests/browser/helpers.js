@@ -23,9 +23,8 @@ export async function start(page, level = 1) {
         s.guardian.legendQuizPassed = true;
         s.guardian.legendSeen = m.content.guardianLegend.pages.map((p) => p.id);
       }
-      localStorage.setItem("geumsan-state-v1", JSON.stringify(s));
+      m.persist();
     }, level);
-    await page.reload();
   }
   await page.evaluate(async () => {
     const m = await import(

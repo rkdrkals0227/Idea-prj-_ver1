@@ -1,4 +1,4 @@
-import {libraryBooks} from './data/library-books.js';
+import {decorateLibrary} from './library-scenery.js';
 import {schoolRoadRoute} from "./tactile.js";
 import { naturalTerrain, decorateClassroom, riverAt } from "./scenery.js";
 import { dayPhase } from "./experience.js";
@@ -650,6 +650,7 @@ export class World {
     this.keys.clear();
     if (this.indoor) this.exit();
     this.indoor = id;
+    this.libraryDecor=null;
     this.outdoor.visible = false;
     this.room = new THREE.Group();
     this.scene.add(this.room);
@@ -660,21 +661,10 @@ export class World {
       decorateClassroom(this.room,this.content.classRules);
       this.roomColliders=[-4.7,4.7].flatMap(x=>[-.8,2.6].map(z=>({x,z,w:2.7,d:2.5})));
     } else {
-      for (let i = -1; i <= 1; i++) {
-        this.libraryShelves.push(shape("box", 0x9e7655, [3, 3, 0.7], [i * 4, 1.5, -6], this.room));
-        for (let j = 0; j < 9; j++)
-          shape(
-            "box",
-            [0xa1bda7, 0xe3b18b, 0xd3c69d][j % 3],
-            [0.22, 1, 0.4],
-            [i * 4 - 1 + j * 0.25, 1 + (j % 2), -5.5],
-            this.room,
-          );
-      }
+      const library=decorateLibrary(this.room);
+      this.libraryDecor=library.group;this.roomColliders=library.colliders;
+      this.libraryShelves=library.shelves;this.libraryBookMeshes=library.books;
     }
-    if(id==='library')libraryBooks.forEach((book,i)=>{
-      const mesh=shape('box',book.color,[.85,1.35,.35],[(i-2)*1.55,1.65,-5.25],this.room);mesh.userData.bookId=book.id;this.libraryBookMeshes.push(mesh);
-    });
     this.player.position.set(0, 0, 3);
     this.roomEntities = [
       { id: "exit", title: "마을로 나가기", x: 0, z: 5.7 },
@@ -697,6 +687,7 @@ export class World {
     this.scene.remove(this.room);
     this.room.traverse((o) => {
       if (o.userData.ownedTexture) o.material.map?.dispose();
+      if(o.isInstancedMesh)o.dispose();
     });
     const p = manifest[id].position;
     this.player.position.set(p[0], 0, p[2] + manifest[id].collision[1] / 2 + 2);
