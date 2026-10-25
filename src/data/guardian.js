@@ -1,4 +1,5 @@
 export const guardianStamps = [
+  {id:"school",name:"약속 수호대",icon:"♧",description:"4-4반 학급 회의 규칙 네 줄을 타자로 익히기",location:"금호초등학교 · 칠판"},
   {
     id: "story",
     name: "이야기 수호대",
@@ -13,13 +14,7 @@ export const guardianStamps = [
     description: "안내 길을 잇고 주택가 쓰레기 3개를 모두 분류하기",
     location: "학교 앞 안내 길 · 주택가",
   },
-  {
-    id: "ecology",
-    name: "생태 수호대",
-    icon: "♧",
-    description: "그림에 이름과 보호 약속을 적고 우리 반 생태 지도에 등록하기",
-    location: "우리 반 생태 지도",
-  },
+
 ];
 export const defaultGuardianLegend = {
   id: "geumho-two-dragons",

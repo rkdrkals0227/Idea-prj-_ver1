@@ -12,114 +12,6 @@ import {
 } from "./helpers.js";
 test.setTimeout(90000);
 
-test("drawings preserve interior white, resize large images, restore and synchronize edits/deletion", async ({
-  page,
-}) => {
-  const errors = [];
-  page.on("pageerror", (e) => errors.push(e.message));
-  await start(page, 4);
-  await picture(page, { large: true });
-  await expect(page.locator("#art-canvas")).toHaveJSProperty("width", 1024);
-  await page.locator("#remove-bg").click();
-  expect(
-    await page.locator("#art-canvas").evaluate((c) => {
-      const x = c.getContext("2d");
-      return [
-        x.getImageData(0, 0, 1, 1).data[3],
-        x.getImageData(400, 300, 1, 1).data[3],
-      ];
-    }),
-  ).toEqual([0, 255]);
-  await publish(page, "흰 나비");
-  await page.reload();
-  await openTools(page);
-  await page.locator('[data-page="catalog"]').click();
-  await expect(
-    page.getByRole("heading", { name: "흰 나비", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "작품 살펴보기" }).click();
-  await page.getByRole("button", { name: "이름·설명·위치 수정" }).click();
-  await page.locator('[name="name"]').fill("호수 나비");
-  await page.locator('[name="habitat"]').selectOption("lake");
-  await page.getByRole("button", { name: "변경 저장" }).click();
-  await page.getByRole("button", { name: "지도 위치" }).click();
-  await expect(page.locator("[data-art]")).toContainText("호수 나비");
-  const ids = await page.evaluate(async () => {
-    const { world, works } = await import(
-      document.querySelector('script[type="module"][src*="/src/main.js"]').src
-    );
-    return [
-      works[0].id,
-      world.art[0].data.id,
-      document.querySelector("[data-art]")?.dataset.art,
-    ];
-  });
-  expect(new Set(ids).size).toBe(1);
-  await close(page);
-  await openTools(page);
-  await page.locator('[data-page="catalog"]').click();
-  const dl = page.waitForEvent("download");
-  await page.getByRole("button", { name: "학급 작품 묶음 내보내기" }).click();
-  expect((await dl).suggestedFilename()).toContain("학급작품");
-  await page.getByRole("button", { name: "작품 살펴보기" }).click();
-  await page.getByRole("button", { name: "작품 삭제" }).click();
-  await page.getByRole("button", { name: "삭제하기", exact: true }).click();
-  await expect(page.getByText("첫 번째 생태 친구를 기다려요")).toBeVisible();
-  await expect(page.locator("#level-title")).toContainText("레벨 4");
-  await expect(page.locator("#badge-count")).toHaveText("2 / 3");
-  expect(errors).toEqual([]);
-});
-
-test("image failures, transparent PNG, storage quota feedback and paused Korean input remain usable", async ({
-  page,
-}) => {
-  await start(page, 4);
-  await page.locator("#image-input").setInputFiles({
-    name: "bad.png",
-    mimeType: "image/png",
-    buffer: Buffer.from("invalid"),
-  });
-  await expect(page.locator("#toast")).toContainText("이미지 크기");
-  await picture(page, { transparent: true });
-  expect(
-    await page
-      .locator("#art-canvas")
-      .evaluate((c) => c.getContext("2d").getImageData(0, 0, 1, 1).data[3]),
-  ).toBe(0);
-  await page.locator('[name="name"]').fill("한글 이름");
-  const before = await page.evaluate(
-    async () =>
-      (
-        await import(
-          document.querySelector('script[type="module"][src*="/src/main.js"]')
-            .src
-        )
-      ).world.player.position.x,
-  );
-  await page.keyboard.press("a");
-  expect(
-    await page.evaluate(
-      async () =>
-        (
-          await import(
-            document.querySelector('script[type="module"][src*="/src/main.js"]')
-              .src
-          )
-        ).world.player.position.x,
-    ),
-  ).toBe(before);
-  await close(page);
-  await page.evaluate(() => {
-    Storage.prototype.setItem = function () {
-      throw new DOMException("Quota", "QuotaExceededError");
-    };
-  });
-  await openTools(page);
-  await page.locator('[data-page="settings"]').click();
-  await page.getByRole("button", { name: "설정 적용" }).click();
-  await expect(page.locator("#toast")).toContainText("저장 공간이 부족");
-});
-
 test("missing GLB keeps the physical school, collision and class meeting usable", async ({
   page,
 }) => {
@@ -174,7 +66,6 @@ test("residents introduce themselves once and keep distinct scoped story and qui
   for (const [x, z, topic, word] of [
     [-4, 1, "강과 마을 문화", "물결과 강가"],
     [19, -11, "호수 생태", "야생 생물"],
-    [4, -6, "사실과 전설", "전해 내려오는"],
   ]) {
     await act(page, x, z, "동물 친구", false);
     await expect(
@@ -244,10 +135,9 @@ test("library, forest and apartment have own learning; letters save, escape HTML
   await close(page);
   await act(page, 1, -6, "들어가기");
   await act(page, 0, -3.8, "책장");
-  await page.getByRole("button", { name: "자료 읽기 퀴즈" }).click();
-  await expect(page.locator(".modal-body h3")).toContainText(
-    "오래된 생태 조사",
-  );
+  await expect(page.locator("[data-library-book]")).toHaveCount(5);
+  await page.locator('[data-library-book="jinju-history"]').click();
+  await expect(page.locator(".reading-copy")).toContainText("남강");
   await close(page);
   await act(page, 0, 5, "나가기");
   await act(page, 4, 8, "우체통");
@@ -281,7 +171,7 @@ test("library, forest and apartment have own learning; letters save, escape HTML
   ).toBe(1);
 });
 
-test("lake care still requires cleanup, identification and expert handover but does not replace the level 4 exhibition", async ({
+test("optional lake care requires cleanup, identification and expert handover without replacing legend", async ({
   page,
 }) => {
   await start(page, 3);
@@ -318,69 +208,7 @@ test("lake care still requires cleanup, identification and expert handover but d
       ).state,
   );
   expect(s.completed).toContain("lake");
-  await expect(page.locator("#badge-count")).toHaveText("1 / 3");
-});
-
-test("bundle metadata and duplicate IDs round-trip without awarding a stamp on import; edit is explicit publication", async ({
-  page,
-}) => {
-  await start(page, 4);
-  const image = await page.evaluate(() => {
-    const c = document.createElement("canvas");
-    c.width = c.height = 30;
-    c.getContext("2d").fillRect(5, 5, 20, 20);
-    return c.toDataURL();
-  });
-  const bundle = {
-    schema: "geumsan-art",
-    version: 1,
-    works: [
-      {
-        id: "shared",
-        name: "가져온 풀",
-        alias: "친구",
-        habitat: "river",
-        kind: "plant",
-        protection: "밟지 않아요",
-        exhibition: "namgang",
-        image,
-      },
-    ],
-  };
-  await openTools(page);
-  await page.locator('[data-page="catalog"]').click();
-  for (const name of ["가져온 풀", "새 이름 풀"]) {
-    bundle.works[0].name = name;
-    const chooser = page.waitForEvent("filechooser");
-    await page.getByRole("button", { name: "작품 묶음 가져오기" }).click();
-    await (
-      await chooser
-    ).setFiles({
-      name: "학급.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(bundle)),
-    });
-    await expect(
-      page.getByRole("heading", { name, exact: true }),
-    ).toBeVisible();
-  }
-  expect(
-    await page.evaluate(
-      async () =>
-        (
-          await import(
-            document.querySelector('script[type="module"][src*="/src/main.js"]')
-              .src
-          )
-        ).works.length,
-    ),
-  ).toBe(1);
   await expect(page.locator("#badge-count")).toHaveText("2 / 3");
-  await page.getByRole("button", { name: "작품 살펴보기" }).click();
-  await expect(page.getByText("밟지 않아요", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "이름·설명·위치 수정" }).click();
-  await page.getByRole("button", { name: "변경 저장" }).click();
-  await expect(page.locator("#badge-count")).toHaveText("3 / 3");
 });
 
 test("teacher edits and invalid quiz validation persist while WebGL loss shows recovery", async ({

@@ -45,7 +45,7 @@ export function earnedGuardianStamps(state) {
       canEnterLevel(state, 2) &&
       state.completed.includes("path") &&
       state.completed.includes("trash"),
-    ecology: canEnterLevel(state, 4) && !!state.journey?.exhibitIds.length,
+    school: !!state.journey?.schoolReady,
   };
   return guardianStamps.filter((s) => conditions[s.id]);
 }

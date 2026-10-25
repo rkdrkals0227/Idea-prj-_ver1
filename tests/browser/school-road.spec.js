@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test';import {start,act} from './helpers.js';
 const inspect=(page,fn)=>page.evaluate(async f=>{const m=await import('/src/main.js');return new Function('m',`return (${f})(m)`)(m)},fn.toString());
 test('opening explains three missions and pupils can type numbered class rules',async({page})=>{
- await page.goto('/');await expect(page.locator('.mission-briefing')).toHaveCount(3);await expect(page.locator('.briefing-finale')).toContainText('생태 지도');
+ await page.goto('/');await expect(page.locator('.mission-briefing')).toHaveCount(3);await expect(page.locator('.briefing-finale')).toContainText('탐험 끝');
  await page.getByRole('button',{name:'탐험을 시작할까요? →'}).click();await act(page,-10,-1,'학교');await act(page,0,-4,'회의');
  await expect(page.locator('.class-chalkboard')).toContainText('4-4반 아이들');
  const rules=await inspect(page,m=>m.content.classRules.rules);

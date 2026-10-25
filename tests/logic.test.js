@@ -200,22 +200,10 @@ test("guardian legend requires all sequential dialogue pages before quiz; wrong 
   readLegendPage(s, lesson, lesson.pages[0].id);
   assert.equal(s.guardian.legendSeen.length, lesson.pages.length);
   assert.equal(answerLegend(s, lesson, 1), "wrong");
-  assert.equal(earnedGuardianStamps(s).length, 1);
-  assert.equal(answerLegend(s, lesson, 0), "earned");
-  assert.equal(answerLegend(s, lesson, 0), "already");
-  assert.deepEqual(
-    earnedGuardianStamps(s).map((s) => s.id),
-    ["story", "village"],
-  );
-  assert.equal(isGuardian(s), false);
-  s.completed = ["path"];
-  assert.equal(earnedGuardianStamps(s).length, 0);
-  s.completed.push("trash");
   assert.equal(earnedGuardianStamps(s).length, 2);
-  s.completed.push("lake");
-  s.journey.exhibitIds = ["work-1"];
-  assert.equal(isGuardian(s), true);
-  assert.equal(earnedGuardianStamps(s).length, 3);
+  assert.equal(answerLegend(s, lesson, 0), "earned");assert.equal(answerLegend(s, lesson, 0), "already");
+  assert.deepEqual(earnedGuardianStamps(s).map(s=>s.id),['school','story','village']);assert.equal(isGuardian(s),true);
+  s.completed=['path'];assert.equal(earnedGuardianStamps(s).length,1);s.completed.push('trash');assert.equal(earnedGuardianStamps(s).length,3);
   const restored = JSON.parse(JSON.stringify(s));
   assert.equal(isGuardian(restored), true);
   assert.equal(hasReadLegend(restored, lesson), true);

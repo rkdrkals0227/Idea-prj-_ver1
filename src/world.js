@@ -1,3 +1,4 @@
+import {libraryBooks} from './data/library-books.js';
 import {schoolRoadRoute} from "./tactile.js";
 import { naturalTerrain, decorateClassroom, riverAt } from "./scenery.js";
 import { dayPhase } from "./experience.js";
@@ -205,6 +206,11 @@ export class World {
         ],
         false,
       );
+      if(this.indoor==='library'){
+        const bookHits=ray.intersectObjects(this.libraryBookMeshes||[],false);
+        if(bookHits[0]){this.callbacks.interact('book:'+bookHits[0].object.userData.bookId);return}
+        if(ray.intersectObjects(this.libraryShelves||[],false).length){this.callbacks.interact('books');return}
+      }
       if (hits[0]) this.callbacks.interact("art:" + hits[0].object.userData.artId);
       else if(!this.indoor && ray.intersectObject(this.lakeModel,true).length) this.callbacks.interact("lake-story");
     });
@@ -640,6 +646,7 @@ export class World {
 
   enter(id) {
     this.roomColliders=[];
+    this.libraryBookMeshes=[];this.libraryShelves=[];
     this.keys.clear();
     if (this.indoor) this.exit();
     this.indoor = id;
@@ -654,7 +661,7 @@ export class World {
       this.roomColliders=[-4.7,4.7].flatMap(x=>[-.8,2.6].map(z=>({x,z,w:2.7,d:2.5})));
     } else {
       for (let i = -1; i <= 1; i++) {
-        shape("box", 0x9e7655, [3, 3, 0.7], [i * 4, 1.5, -6], this.room);
+        this.libraryShelves.push(shape("box", 0x9e7655, [3, 3, 0.7], [i * 4, 1.5, -6], this.room));
         for (let j = 0; j < 9; j++)
           shape(
             "box",
@@ -665,6 +672,9 @@ export class World {
           );
       }
     }
+    if(id==='library')libraryBooks.forEach((book,i)=>{
+      const mesh=shape('box',book.color,[.85,1.35,.35],[(i-2)*1.55,1.65,-5.25],this.room);mesh.userData.bookId=book.id;this.libraryBookMeshes.push(mesh);
+    });
     this.player.position.set(0, 0, 3);
     this.roomEntities = [
       { id: "exit", title: "마을로 나가기", x: 0, z: 5.7 },
@@ -673,7 +683,7 @@ export class World {
         title:
           id === "school"
             ? "학급 회의 규칙 · 타자 치기"
-            : "책장 · 지역 자료와 도감",
+            : "책장 · 진주 이야기 다섯 권",
         x: 0,
         z: -4,
       },

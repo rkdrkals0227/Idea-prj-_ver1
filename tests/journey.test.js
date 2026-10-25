@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { initialState } from "../src/logic.js";
 import { defaults } from "../src/data/content.js";
 import * as journey from "../src/journey.js";
-test("school must be completed before road, legend and exhibits unlock", () => {
+test("school must be completed before road and legend unlock", () => {
   const s = initialState();
   assert.equal(journey.journeyLevel(s), 1);
   assert.equal(journey.canEnterLevel(s, 3), false);
@@ -99,35 +99,13 @@ test("week boundaries use Seoul dates, reject future checks, and never relock sc
   ]);
   assert.equal(s.journey.checks["2026-10-24"].note, "내일도 실천");
 });
-test("a pledge and explicit local exhibition are required; importing or deleting work cannot silently complete a level", () => {
-  const s = initialState(),
-    work = {
-      id: "a",
-      name: "수달 그림",
-      protection: "먹이를 주지 않고 관찰해요",
-      exhibition: "namgang",
-      blob: new Blob(["test"]),
-    };
-  assert.equal(journey.registerExhibit(s, work), false);
-  s.journey.schoolReady = true;
-  s.completed = ["path", "trash"];
-  s.guardian.legendQuizPassed = true;
-  journey.reconcileExhibits(s, [work]);
-  assert.equal(journey.journeyLevel(s), 4);
-  assert.equal(
-    journey.registerExhibit(s, { ...work, protection: "  " }),
-    false,
-  );
-  assert.equal(journey.registerExhibit(s, { ...work, name: "  " }), false);
-  assert.equal(journey.registerExhibit(s, work), true);
-  journey.registerExhibit(s, work);
-  assert.equal(journey.journeyLevel(s), 5);
-  assert.deepEqual(s.journey.exhibitIds, ["a"]);
-  journey.reconcileExhibits(s, []);
-  assert.equal(journey.journeyLevel(s), 4);
+test("archived exhibits cannot become a current mission or change three-lesson completion",()=>{
+ const s=initialState(),work={id:'legacy',name:'그림',protection:'약속',exhibition:'namgang',blob:new Blob(['x'])};
+ assert.equal(journey.registerExhibit(s,work),false);s.journey.schoolReady=true;s.completed=['path','trash'];s.guardian.legendQuizPassed=true;s.journey.exhibitIds=['legacy'];
+ journey.reconcileExhibits(s,[work]);assert.deepEqual(s.journey.exhibitIds,['legacy']);assert.equal(journey.journeyLevel(s),4);journey.reconcileExhibits(s,[]);assert.equal(journey.journeyLevel(s),4);assert.equal(journey.canEnterLevel(s,4),false);
 });
 
-test("collected road waste points to bag and stage4 points to the single ecology map", async () => {
+test("collected road waste points to bag and three-lesson success has no destination", async () => {
   const { objective } = await import("../src/journey.js");
   const { initialState } = await import("../src/logic.js");
   const { defaults } = await import("../src/data/content.js");
@@ -141,8 +119,7 @@ test("collected road waste points to bag and stage4 points to the single ecology
   assert.equal(objective(s, defaults, null).id, "bag");
   s.completed.push("trash");
   s.guardian.legendQuizPassed = true;
-  assert.equal(objective(s, defaults, null).id, "eco-map");
-  assert.equal(objective(s, defaults, null).ui, true);
+  assert.equal(objective(s, defaults, null), null);
 });
 
 test("tracked trash locations follow remaining items and switch to bag instead of deleted board", () => {

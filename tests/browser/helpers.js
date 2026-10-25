@@ -11,6 +11,7 @@ export async function start(page, level = 1) {
         s = m.state;
       // Focused regression fixtures represent prior, already completed lessons.
       s.journey.schoolReady = true;
+      const {roadPages}=await import('/src/road-reading.js');s.journey.roadReading=roadPages.map(p=>p.id);
       s.journey.briefingRead = true;
       s.journey.plan = { agendaId: "a-path", promise: "길을 막지 않아요" };
       if (level >= 3) {

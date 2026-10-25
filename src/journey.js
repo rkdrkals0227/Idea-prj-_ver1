@@ -16,11 +16,7 @@ export const levels = [
     description:
       "동물 친구와 인사하고 금호지 전설을 끝까지 읽은 뒤 퀴즈를 풀어요.",
   },
-  {
-    id: 4,
-    title: "우리 반 생태 지도",
-    description: "지도에 그림·이름·보호 약속을 등록해요.",
-  },
+
 ];
 export function initialJourney() {
   return {
@@ -32,6 +28,8 @@ export function initialJourney() {
     checks: {},
     ruleCopies: {},
     openedLakeBook:false,
+    roadReading: [],
+    sessionEnded: false,
     met: [],
     exhibitIds: [],
   };
@@ -44,6 +42,8 @@ export function normalizeJourney(value) {
     checks: value?.checks || {},
     ruleCopies: value?.ruleCopies || {},
     met: value?.met || [],
+    roadReading: Array.isArray(value?.roadReading)?value.roadReading:[],
+    sessionEnded: value?.sessionEnded===true,
     exhibitIds: value?.exhibitIds || [],
   };
 }
@@ -51,11 +51,10 @@ export function journeyLevel(s) {
   if (!s.journey?.schoolReady) return 1;
   if (!s.completed.includes("path") || !s.completed.includes("trash")) return 2;
   if (!s.guardian?.legendQuizPassed) return 3;
-  if (!s.journey.exhibitIds.length) return 4;
-  return 5;
+  return 4;
 }
 export function canEnterLevel(s, n) {
-  return Number.isInteger(n) && n >= 1 && n <= 4 && journeyLevel(s) >= n;
+  return Number.isInteger(n) && n >= 1 && n <= 3 && journeyLevel(s) >= n;
 }
 export function markBriefingRead(s) {
   s.journey = normalizeJourney(s.journey);
@@ -150,6 +149,8 @@ export function validateJourney(j) {
     !j.checks ||
     typeof j.checks !== "object" ||
     Array.isArray(j.checks) ||
+    (j.roadReading!==undefined&&(!Array.isArray(j.roadReading)||!j.roadReading.every(id=>typeof id==="string"))) ||
+    (j.sessionEnded!==undefined&&typeof j.sessionEnded!=="boolean") ||
     !Array.isArray(j.met) ||
     !j.met.every((id) => typeof id === "string") ||
     !Array.isArray(j.exhibitIds) ||
@@ -185,7 +186,6 @@ export function objective(s, content, indoor) {
       : { id: "bag", ui: true };
   }
   if (level === 3) return { id: "turtle", x: 19, z: -11 };
-  if (level === 4) return { id: "eco-map", ui: true };
   return null;
 }
 

@@ -1,6 +1,6 @@
 import {createRoadLesson,chooseRoadStep,roadLessonComplete} from './road-lesson.js';
 import {escapeHTML as h} from './logic.js';
-function blockPicture(type,rotation=0){
+export function blockPicture(type,rotation=0){
  if(type==='empty')return '<span class="road-empty" aria-label="빈칸">?</span>';
  const shape=type==='dot'?Array.from({length:9},(_,i)=>`<circle cx="${30+i%3*30}" cy="${30+Math.floor(i/3)*30}" r="9" fill="#b98a2f"/>`).join(''):`<g transform="rotate(${rotation} 60 60)">${[30,60,90].map(y=>`<path d="M18 ${y}H102" stroke="#b98a2f" stroke-width="13" stroke-linecap="round"/>`).join('')}</g>`;
  return `<svg viewBox="0 0 120 120" aria-hidden="true"><rect x="3" y="3" width="114" height="114" rx="17" fill="#f5d483" stroke="#d8ad58" stroke-width="5"/>${shape}</svg>`;
