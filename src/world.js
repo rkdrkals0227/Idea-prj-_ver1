@@ -1,3 +1,4 @@
+import { residentIds, createPatrol, stepPatrol } from "./patrol.js";
 import { gameKey, isTextEntry } from "./input.js";
 import * as THREE from "three";
 import { ModelLibrary, ModelActor, fitModel, modelVariants } from "./models.js";
@@ -220,19 +221,8 @@ export class World {
     const obj = object || new THREE.Group();
     if (!object) this.outdoor.add(obj);
     obj.position.set(x, 0, z);
-    const npc = [
-      "otter",
-      "turtle",
-      "crane",
-      "postman",
-      "resident",
-      "manager",
-    ].includes(id);
-    const displayTitle = npc
-      ? id === "manager"
-        ? "생태 안내원 · 이야기하기"
-        : "동물 친구 · 이야기하기"
-      : title;
+    const npc = ["otter", "turtle", "crane"].includes(id);
+    const displayTitle = npc ? "동물 친구 · 이야기하기" : title;
     if (
       [
         "path",
@@ -242,6 +232,8 @@ export class World {
         "forest",
         "rest",
         "exhibition",
+        "neighborhood",
+        "eco-station",
       ].includes(id)
     )
       this.signpost(id, title, x, z - 0.6, 3.2);
@@ -488,17 +480,20 @@ export class World {
         this.outdoor,
       );
     }
-    for (const id of ["otter", "turtle", "crane", "postman"]) {
+    for (const id of residentIds) {
       const g = this.animal(id),
         p = manifest[id].position;
       this.outdoor.add(g);
       this.entity(id, this.content.dialogues[id].name, ...[p[0], p[2]], g);
+      const entity = this.entities.at(-1);
+      entity.patrol = createPatrol(
+        manifest[id].patrol.points,
+        manifest[id].patrol.speed,
+      );
+      entity.kind = "npc";
       this.loadRole(id, g);
     }
-    const npc = this.animal("otter");
-    this.outdoor.add(npc);
-    this.entity("resident", "밤톨 · 주택가 주민", 16, 9, npc);
-    this.loadRole("resident", npc);
+    this.entity("neighborhood", "주택가 생활 게시판", 16, 9);
     this.entity("path", "안내 길 · 살펴보기", -6, 4.7);
     this.entity("bins", "분리수거함", 11, 10);
     for (let i = 0; i < 3; i++)
@@ -523,10 +518,9 @@ export class World {
       [18, 0.15, -14],
       this.outdoor,
     );
-    const manager = this.animal("crane");
-    this.outdoor.add(manager);
-    this.entity("manager", "생태 안내원 · 연습 표본 인계", 14, -10, manager);
-    this.loadRole("manager", manager);
+    this.entity("eco-station", "생태 관리소 · 연습 표본 접수", 14, -10);
+    shape("box", 0x7eaa8e, [1.4, 0.8, 0.8], [14, 0.4, -11.2], this.outdoor);
+    this.block(14, -11.2, 1.4, 0.8);
     this.specimen = shape(
       "sphere",
       0xb789a4,
@@ -931,6 +925,43 @@ export class World {
     );
     this.transfer = { mesh, from: mesh.position.clone(), elapsed: 0 };
   }
+  updateResidents(dt) {
+    for (const e of this.entities.filter((e) => e.kind === "npc")) {
+      const actor = this.models[e.id];
+      const p = stepPatrol(e.patrol, dt, {
+        paused:
+          !this.moveEnabled ||
+          !!this.indoor ||
+          this.settings?.motion ||
+          actor?.current?.role === "greet",
+        player: this.player.position,
+        blocked: (x, z) => this.blocked(x, z),
+      });
+      e.x = p.x;
+      e.z = p.z;
+      e.obj.position.set(p.x, 0, p.z);
+      e.obj.rotation.y = p.rotation;
+      if (actor?.current?.role !== "greet")
+        actor?.setState(p.moving ? "walk" : "idle");
+      if (this.activeObjective?.id === e.id) {
+        this.activeObjective = { ...this.activeObjective, x: e.x, z: e.z };
+        this.objectiveGroup.position.set(e.x, 0, e.z);
+      }
+    }
+  }
+  deliverLetter() {
+    this.delivery?.mesh.removeFromParent();
+    const from = new THREE.Vector3(4, 1.5, 8),
+      to = new THREE.Vector3(20, 1.5, 8);
+    const mesh = shape(
+      "box",
+      0xfff6da,
+      [0.65, 0.4, 0.08],
+      from.toArray(),
+      this.scene,
+    );
+    this.delivery = { mesh, from, to, elapsed: 0 };
+  }
   setObjective(target) {
     this.activeObjective = target;
     this.objectiveGroup.visible = !!target;
@@ -1011,31 +1042,11 @@ export class World {
     const reduced = this.settings?.motion;
     this.player.position.y = length && !reduced ? Math.sin(t * 14) * 0.06 : 0;
     this.models.player?.setState(length ? "walk" : "idle");
-    for (const [id, actor] of Object.entries(this.models)) {
-      if (["otter", "turtle", "crane", "resident", "manager"].includes(id)) {
-        const entity = this.entities.find((e) => e.id === id);
-        const patrol =
-          this.moveEnabled &&
-          !this.indoor &&
-          !reduced &&
-          Math.sin(t * 0.28 + entity.x) > 0.7;
-        if (actor.current?.role !== "greet") {
-          actor.setState(patrol ? "walk" : "idle");
-          entity.obj.position.x =
-            entity.x + (patrol ? Math.sin(t * 0.8) * 0.35 : 0);
-          entity.obj.rotation.y = patrol
-            ? Math.cos(t * 0.8) > 0
-              ? Math.PI / 2
-              : -Math.PI / 2
-            : 0;
-        }
-      }
-      if (id === "postman" && actor.current?.role !== "greet")
-        actor.setState(this.delivery ? "walk" : "idle");
+    this.updateResidents(Math.min(elapsed, 0.25));
+    for (const actor of Object.values(this.models))
       actor.update(
         reduced && actor.current?.role !== "greet" ? 0 : animationDt,
       );
-    }
     const p = this.player.position;
     const target = new THREE.Vector3(p.x + 13, p.y + 21, p.z + 23);
     this.camera.position.lerp(target, 1 - Math.exp(-dt * 5));
@@ -1071,12 +1082,14 @@ export class World {
       }
     }
     if (this.delivery) {
-      const e = this.entities.find((e) => e.id === "postman");
-      e.obj.position.x = e.x + Math.sin(Math.min(this.delivery, Math.PI)) * 3;
-      this.delivery += dt * 1.5;
-      if (this.delivery > Math.PI) {
-        e.obj.position.x = e.x;
-        this.delivery = 0;
+      const d = this.delivery;
+      d.elapsed += animationDt;
+      const f = Math.min(d.elapsed / 2.5, 1);
+      d.mesh.position.lerpVectors(d.from, d.to, f);
+      d.mesh.position.y += Math.sin(f * Math.PI) * 2;
+      if (f === 1) {
+        d.mesh.removeFromParent();
+        this.delivery = null;
       }
     }
     this.renderer.render(this.scene, this.camera);

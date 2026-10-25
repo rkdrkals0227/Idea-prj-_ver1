@@ -10,7 +10,9 @@ replaced = {job['name'] for job in jobs}
 report = [entry for entry in json.loads(existing.read_text()) if entry['id'] not in replaced] if existing.exists() else []
 for job in jobs:
     src=pathlib.Path(job['path']); dest=out/(job['name']+'.glb')
-    if not job['animated']:
+    preserve_geometry = job.get('preserveGeometry',job['name'] in ('school','library','apartment'))
+    texture_size = job.get('textureSize',1024 if preserve_geometry else 512)
+    if not job['animated'] and not preserve_geometry:
         bpy.ops.wm.read_factory_settings(use_empty=True)
         bpy.ops.import_scene.gltf(filepath=str(src))
         for obj in bpy.context.scene.objects:
@@ -21,8 +23,8 @@ for job in jobs:
                     mod=obj.modifiers.new('Web simplification','DECIMATE'); mod.ratio=budget/triangles
         # Resize before export to avoid embedding huge original textures.
         for img in bpy.data.images:
-            if img.size[0] and max(img.size)>512:
-                factor=512/max(img.size); img.scale(max(1,int(img.size[0]*factor)),max(1,int(img.size[1]*factor)))
+            if img.size[0] and max(img.size)>texture_size:
+                factor=texture_size/max(img.size); img.scale(max(1,int(img.size[0]*factor)),max(1,int(img.size[1]*factor)))
                 img.pack()
         bpy.ops.export_scene.gltf(filepath=str(dest.resolve()),export_format='GLB',export_apply=True)
         raw=dest.read_bytes()
@@ -33,7 +35,7 @@ for job in jobs:
     for image in doc.get('images',[]):
         view=doc['bufferViews'][image['bufferView']]; start=view.get('byteOffset',0)
         im=Image.open(io.BytesIO(binary[start:start+view['byteLength']]))
-        im.thumbnail((512,512)); stream=io.BytesIO()
+        im.thumbnail((texture_size,texture_size)); stream=io.BytesIO()
         if im.mode in ('RGBA','LA'):
             im.save(stream,format='PNG',optimize=True); image['mimeType']='image/png'
         else:
@@ -47,6 +49,6 @@ for job in jobs:
     meta=json.dumps(doc,separators=(',',':')).encode();meta+=b' '*((-len(meta))%4)
     result=struct.pack('<III',0x46546c67,2,28+len(meta)+len(compact))+struct.pack('<II',len(meta),0x4e4f534a)+meta+struct.pack('<II',len(compact),0x004e4942)+compact
     dest.write_bytes(result)
-    report.append({'id':job['name'],'sourceFile':src.name,'originalBytes':src.stat().st_size,'webBytes':len(result),'animations':[a.get('name') for a in doc.get('animations',[])]})
+    report.append({'id':job['name'],'sourceFile':src.name,'originalBytes':src.stat().st_size,'webBytes':len(result),'animations':[a.get('name') for a in doc.get('animations',[])],'geometryPreserved':bool(preserve_geometry),'textureSize':texture_size})
     print('PREPARED',job['name'],len(result),flush=True)
 (out/'provenance.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))

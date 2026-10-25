@@ -30,7 +30,10 @@ export async function start(page, level = 1) {
     const m = await import(
       document.querySelector('script[type="module"][src*="/src/main.js"]').src
     );
-    m.world.configure({ ...m.state.settings, quality: "low" });
+    // Functional fixtures keep low graphics after reload as a real saved setting.
+    m.state.settings.quality = "low";
+    localStorage.setItem("geumsan-state-v1", JSON.stringify(m.state));
+    m.world.configure(m.state.settings);
   });
 }
 export async function move(page, x, z) {
@@ -39,7 +42,13 @@ export async function move(page, x, z) {
       const { world } = await import(
         document.querySelector('script[type="module"][src*="/src/main.js"]').src
       );
-      world.player.position.set(x, 0, z);
+      const npc = world.entities.find(
+        (e) =>
+          e.kind === "npc" &&
+          e.patrol.points[0][0] === x &&
+          e.patrol.points[0][1] === z,
+      );
+      world.player.position.set(npc ? npc.x : x, 0, npc ? npc.z : z);
     },
     { x, z },
   );
@@ -85,13 +94,11 @@ export async function picture(
     },
     { large, transparent },
   );
-  await page
-    .locator("#image-input")
-    .setInputFiles({
-      name: "생태그림.png",
-      mimeType: "image/png",
-      buffer: Buffer.from(data, "base64"),
-    });
+  await page.locator("#image-input").setInputFiles({
+    name: "생태그림.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(data, "base64"),
+  });
 }
 export async function publish(page, name = "우리 생태 친구") {
   await page.locator('[name="name"]').fill(name);

@@ -13,7 +13,13 @@ async function move(page, x, z) {
       const m = await import(
         document.querySelector('script[type="module"][src*="/src/main.js"]').src
       );
-      m.world.player.position.set(x, 0, z);
+      const npc = m.world.entities.find(
+        (e) =>
+          e.kind === "npc" &&
+          e.patrol.points[0][0] === x &&
+          e.patrol.points[0][1] === z,
+      );
+      m.world.player.position.set(npc ? npc.x : x, 0, npc ? npc.z : z);
     },
     { x, z },
   );
@@ -133,7 +139,8 @@ test("Namgang exhibition requires the creature name and protection pledge and ap
 test("all four levels play in sequence with weekly checks, road solving, legend dialogue and final exhibition", async ({
   page,
 }) => {
-  test.setTimeout(120000);
+  // Four complete lessons plus a final full-model reload on software WebGL.
+  test.setTimeout(180000);
   const {
     start,
     move: go,

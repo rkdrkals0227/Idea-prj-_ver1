@@ -272,7 +272,7 @@ function introduce(key, next) {
   };
 }
 function talk(id, introduced = false) {
-  if (!levelGate(3)) return;
+  if (!["otter", "turtle", "crane"].includes(id) || !levelGate(3)) return;
   const introKey = id === "resident" ? "house" : id;
   if (!introduced) return introduce(introKey, () => talk(id, true));
   const key = id === "resident" ? "house" : id,
@@ -383,6 +383,27 @@ function placeStory(id) {
     `<p>${h(text)}</p><button class="primary" id="quiz">이곳의 퀴즈 풀기</button>`,
   );
   root.querySelector("#quiz").onclick = () => quiz(id);
+}
+function facility(context) {
+  if (!levelGate(context === "house" ? 2 : 3)) return;
+  const title =
+    context === "house" ? "주택가 생활 게시판" : "마을 우체통 · 마음을 전해요";
+  const d = content.dialogues[context];
+  const r = open(
+    title,
+    `<p class="small">마을 활동 안내</p><p>${h(d.story)}</p><div class="stack"><button id="story">${h(residentThemes[context].title)}</button><button id="quiz">이 주제의 퀴즈</button>${context === "house" ? '<button id="help">주택가 정리 활동</button>' : '<button id="write-letter" class="primary">편지 쓰기 · 이어 쓰기</button>'}</div>`,
+  );
+  r.querySelector("#story").onclick = () => {
+    const card = open(
+      title,
+      `<p>${h(d.story)}</p><button id="topic-quiz">이 이야기의 퀴즈</button>`,
+    );
+    card.querySelector("#topic-quiz").onclick = () => quiz(context);
+  };
+  r.querySelector("#quiz").onclick = () => quiz(context);
+  if (context === "house")
+    r.querySelector("#help").onclick = () => questInfo("trash");
+  else r.querySelector("#write-letter").onclick = letter;
 }
 function safeUrl(url) {
   try {
@@ -550,7 +571,7 @@ function lakeAction(id) {
   }
   if (id === "specimen") {
     if (!state.lake.identify) {
-      toast("먼저 생태 안내원에게 관리 체험 설명을 들어 주세요.");
+      toast("먼저 생태 관리소에서 관리 체험 설명을 들어 주세요.");
       return;
     }
     if (state.lake.picked) {
@@ -559,12 +580,12 @@ function lakeAction(id) {
     }
     state.lake.picked = true;
     persist();
-    toast("연습 표본을 안전 상자에 담았어요. 생태 안내원에게 인계해 주세요.");
+    toast("연습 표본을 안전 상자에 담았어요. 생태 관리소에 인계해 주세요.");
     return;
   }
   const root = open(
     "전문가와 함께하는 생태 돌봄",
-    `<p>모든 외래생물이 제거 대상은 아니에요. 관리 대상과 방법은 전문가가 관찰 근거를 확인하고 정해요.</p><p class="notice">이 체험에서는 실제 종을 수거하지 않아요. 보라색 모형은 안내원이 지정한 <b>연습 표본</b>이에요. 실제 남생이를 잡거나 옮기는 데 보상을 주지 않아요.</p><h3>우리가 할 수 있는 좋은 행동은?</h3><div class="stack"><button id="protect">거리를 두고 관찰·기록하고 어른에게 알리기</button><button id="wrong">보이는 생물을 모두 잡아서 옮기기</button><button id="handover" ${state.lake.picked && !state.lake.handed ? "" : "disabled"}>담아 온 연습 표본 인계하기</button></div><div id="lake-result" aria-live="polite"></div><p class="small">완료 조건: 호숫가 쓰레기 2개 분류 · 쉼터 정리 · 행동 구별 · 연습 표본 인계</p>`,
+    `<p>모든 외래생물이 제거 대상은 아니에요. 관리 대상과 방법은 전문가가 관찰 근거를 확인하고 정해요.</p><p class="notice">이 체험에서는 실제 종을 수거하지 않아요. 보라색 모형은 생태 관리소에서 지정한 <b>연습 표본</b>이에요. 실제 남생이를 잡거나 옮기는 데 보상을 주지 않아요.</p><h3>우리가 할 수 있는 좋은 행동은?</h3><div class="stack"><button id="protect">거리를 두고 관찰·기록하고 어른에게 알리기</button><button id="wrong">보이는 생물을 모두 잡아서 옮기기</button><button id="handover" ${state.lake.picked && !state.lake.handed ? "" : "disabled"}>담아 온 연습 표본 인계하기</button></div><div id="lake-result" aria-live="polite"></div><p class="small">완료 조건: 호숫가 쓰레기 2개 분류 · 쉼터 정리 · 행동 구별 · 연습 표본 인계</p>`,
   );
   root.querySelector("#wrong").onclick = () => {
     root.querySelector("#lake-result").textContent =
@@ -574,13 +595,13 @@ function lakeAction(id) {
     state.lake.identify = true;
     persist();
     root.querySelector("#lake-result").textContent =
-      "✓ 맞아요! 실제 생물은 관찰해요. 이제 안내원이 지정한 보라색 연습 표본만 담아 와 주세요.";
+      "✓ 맞아요! 실제 생물은 관찰해요. 이제 생태 관리소에서 지정한 보라색 연습 표본만 담아 와 주세요.";
   };
   root.querySelector("#handover").onclick = () => {
     state.lake.handed = true;
     persist();
     root.querySelector("#lake-result").innerHTML =
-      '<p class="feedback">▣ → ♧ 안내원이 안전 상자를 받았어요. 전문가에게 인계 완료!</p>';
+      '<p class="feedback">▣ → ♧ 생태 관리소에 안전 상자를 맡겼어요. 전문가에게 인계 접수 완료!</p>';
     root.querySelector("#handover").disabled = true;
     world.handover();
   };
@@ -592,7 +613,7 @@ function letter() {
   if (!levelGate(3)) return;
   const d = state.letterDraft;
   const root = open(
-    "솔솔 우체국 · 마음을 전해요",
+    "마을 우체통 · 마음을 전해요",
     `<p class="notice">게임 속 접수만 해요. 실제 이메일이나 민원은 보내지 않아요. 초안은 선생님과 함께 확인해 주세요.</p><form id="letter"><label>편지 유형<select name="type">${["문제 해결 제안", "주민에게 감사", "우리 동네 소개"].map((t) => `<option ${d.type === t ? "selected" : ""}>${t}</option>`).join("")}</select></label>${[
       ["recipient", "받는 대상", "예: 마을 주민 여러분"],
       [
@@ -670,9 +691,9 @@ function previewLetter(d, received = false) {
       });
       state.letterDraft = {};
       persist();
-      world.delivery = 0.01;
+      world.deliverLetter();
       close();
-      toast("게임 속 편지가 접수되었어요. 솔솔이 마을 안에서 배달해요.");
+      toast("게임 속 편지가 접수되었어요. 편지 봉투가 마을로 배달돼요.");
     };
   }
 }
@@ -684,7 +705,7 @@ const places = [
   { id: "house", name: "주택가", x: 20, z: 8 },
   { id: "lake", name: "금호지", x: 24, z: -18 },
   { id: "forest", name: "숲길", x: -19, z: -11 },
-  { id: "postman", name: "우체통", x: 4, z: 8 },
+  { id: "mailbox", name: "우체통", x: 4, z: 8 },
   { id: "bins", name: "수거함", x: 11, z: 10 },
 ];
 function drawMap(canvas, large = false) {
@@ -730,6 +751,20 @@ function drawMap(canvas, large = false) {
       ctx.fillText(p.name, x(p.x), z(p.z) + 22);
     }
   }
+  for (const e of world?.entities.filter((e) => e.kind === "npc") || []) {
+    ctx.fillStyle = "#738fb2";
+    ctx.beginPath();
+    ctx.arc(x(e.x), z(e.z), large ? 6 : 3, 0, 7);
+    ctx.fill();
+    if (large) {
+      ctx.font = "13px sans-serif";
+      ctx.fillText(
+        { otter: "수달 친구", turtle: "남생이 친구", crane: "학 친구" }[e.id],
+        x(e.x),
+        z(e.z) - 10,
+      );
+    }
+  }
   for (const a of works) {
     const p = habitats[a.habitat];
     ctx.fillStyle = "#b77d5b";
@@ -762,7 +797,8 @@ function drawMap(canvas, large = false) {
       }
     }
   }
-  const active = objective(state, content, world?.indoor);
+  const active =
+    world?.activeObjective || objective(state, content, world?.indoor);
   if (active) {
     ctx.strokeStyle = "#d69b35";
     ctx.lineWidth = 3;
@@ -1085,7 +1121,7 @@ function validateContent(c) {
 function teacher() {
   const root = open(
     "교사용 수업 자료 편집",
-    `<span class="badge">로컬 편집 메뉴 · 계정 권한 보호 기능 아님</span><p class="small">예시 회의·안건 연결·주민의 상태별 대사·퀴즈·출처·분류 기준·미션 목표를 JSON으로 수정해요. 학생 화면에는 <b>검토 완료</b> 자료만 보여요. 원문을 확인한 뒤 문장을 작성하고 checkedAt에 확인일을 적어 주세요. ID는 진행 기록과 연결되므로 유지해 주세요. 퀴즈 contexts에서 대상을 지정해요: otter(수달), turtle(남생이), crane(학), house(주택가), postman(우체부), library(도서관), forest(숲길), apartment(아파트), path(안내 길). 빈 목록이면 주민 퀴즈에 표시하지 않아요.</p><label>편집할 자료<select id="section">${[
+    `<span class="badge">로컬 편집 메뉴 · 계정 권한 보호 기능 아님</span><p class="small">예시 회의·안건 연결·주민의 상태별 대사·퀴즈·출처·분류 기준·미션 목표를 JSON으로 수정해요. 학생 화면에는 <b>검토 완료</b> 자료만 보여요. 원문을 확인한 뒤 문장을 작성하고 checkedAt에 확인일을 적어 주세요. ID는 진행 기록과 연결되므로 유지해 주세요. 퀴즈 contexts에서 대상을 지정해요: otter(수달), turtle(남생이), crane(학), house(생활 게시판), postman(우체통), library(도서관), forest(숲길), apartment(아파트), path(안내 길). 빈 목록이면 주민 퀴즈에 표시하지 않아요.</p><label>편집할 자료<select id="section">${[
       ["meeting", "학급 회의 결과"],
       ["dialogues", "주민 대사"],
       ["quizzes", "퀴즈"],
@@ -1482,11 +1518,14 @@ function interact(id) {
     case "otter":
     case "turtle":
     case "crane":
-    case "postman":
-    case "resident":
       return talk(id);
+    case "postman":
+      return facility("postman");
+    case "resident":
+    case "neighborhood":
+      return facility("house");
     case "house":
-      return talk("resident");
+      return facility("house");
     case "apartment":
       return placeStory("apartment");
     case "path":
@@ -1494,7 +1533,7 @@ function interact(id) {
     case "bins":
       return bins();
     case "mailbox":
-      return letter();
+      return facility("postman");
     case "eco-map":
       return showMap();
     case "forest":
@@ -1504,8 +1543,8 @@ function interact(id) {
     case "rest":
       return lakeAction(id);
     case "manager":
-      if (!levelGate(3)) return;
-      return introduce("manager", () => lakeAction(id));
+    case "eco-station":
+      return lakeAction("manager");
     case "specimen":
       return lakeAction(id);
   }

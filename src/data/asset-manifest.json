@@ -62,6 +62,15 @@
         "url": "models/uploaded/otter-greet.glb",
         "clip": "Big_Wave_Hello"
       }
+    },
+    "patrol": {
+      "points": [
+        [-4, 1],
+        [-1, 1],
+        [-1, 5],
+        [-4, 5]
+      ],
+      "speed": 0.85
     }
   },
   "turtle": {
@@ -84,6 +93,15 @@
         "url": "models/uploaded/turtle-greet.glb",
         "clip": "Big_Wave_Hello"
       }
+    },
+    "patrol": {
+      "points": [
+        [19, -11],
+        [22, -11],
+        [22, -8],
+        [19, -8]
+      ],
+      "speed": 0.85
     }
   },
   "crane": {
@@ -106,28 +124,15 @@
         "url": "models/uploaded/crane-greet.glb",
         "clip": "Big_Wave_Hello"
       }
-    }
-  },
-  "postman": {
-    "url": "models/uploaded/otter-idle.glb",
-    "position": [3, 0, 6],
-    "targetSize": 1.8,
-    "rotation": 0,
-    "groundHeight": 0,
-    "collision": [1, 1],
-    "targetHeight": 1.8,
-    "variants": {
-      "idle": {
-        "url": "models/uploaded/otter-idle.glb"
-      },
-      "walk": {
-        "url": "models/uploaded/otter-walk.glb",
-        "clip": "Walking"
-      },
-      "greet": {
-        "url": "models/uploaded/otter-greet.glb",
-        "clip": "Big_Wave_Hello"
-      }
+    },
+    "patrol": {
+      "points": [
+        [4, -6],
+        [7, -6],
+        [7, -3],
+        [4, -3]
+      ],
+      "speed": 0.85
     }
   },
   "player": {
@@ -261,49 +266,5 @@
       [20, 12],
       [23, 12]
     ]
-  },
-  "resident": {
-    "url": "models/uploaded/otter-idle.glb",
-    "position": [16, 0, 9],
-    "targetSize": 1.8,
-    "rotation": 0,
-    "groundHeight": 0,
-    "collision": [1, 1],
-    "targetHeight": 1.8,
-    "variants": {
-      "idle": {
-        "url": "models/uploaded/otter-idle.glb"
-      },
-      "walk": {
-        "url": "models/uploaded/otter-walk.glb",
-        "clip": "Walking"
-      },
-      "greet": {
-        "url": "models/uploaded/otter-greet.glb",
-        "clip": "Big_Wave_Hello"
-      }
-    }
-  },
-  "manager": {
-    "url": "models/uploaded/crane-idle.glb",
-    "position": [14, 0, -10],
-    "targetSize": 2,
-    "rotation": 0,
-    "groundHeight": 0,
-    "collision": [1, 1],
-    "targetHeight": 2.0,
-    "variants": {
-      "idle": {
-        "url": "models/uploaded/crane-idle.glb"
-      },
-      "walk": {
-        "url": "models/uploaded/crane-walk.glb",
-        "clip": "Walking"
-      },
-      "greet": {
-        "url": "models/uploaded/crane-greet.glb",
-        "clip": "Big_Wave_Hello"
-      }
-    }
   }
 }

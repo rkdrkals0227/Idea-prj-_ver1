@@ -22,6 +22,10 @@ test("uploaded characters and scenery load with real geometry and state-specific
   await inspect(page, async (m) => {
     await m.world.modelsReady;
   });
+  await page.evaluate(
+    () =>
+      new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
   const result = await inspect(page, (m) => ({
     turtle: [...m.world.models.turtle.variants.keys()],
     crane: [...m.world.models.crane.variants.keys()],
@@ -42,7 +46,8 @@ test("uploaded characters and scenery load with real geometry and state-specific
   );
   expect(result.loaded.every(([, s]) => s === "loaded")).toBe(true);
   await inspect(page, (m) => {
-    m.world.player.position.set(19, 0, -9);
+    const e = m.world.entities.find((e) => e.id === "turtle");
+    m.world.player.position.set(e.x, 0, e.z);
     m.world.updateNearby();
     m.world.interactNearby();
   });
@@ -51,7 +56,7 @@ test("uploaded characters and scenery load with real geometry and state-specific
   );
   await expect
     .poll(() => inspect(page, (m) => m.world.models.turtle.current.role), {
-      timeout: 15000,
+      timeout: 30000,
     })
     .toBe("idle");
   const repaired = await inspect(page, (m) => {
@@ -132,9 +137,6 @@ test("complete upload pack uses player, otter, buildings, tree, lake and fence w
       "tree",
       "lake",
       "fence",
-      "resident",
-      "manager",
-      "postman",
     ].filter((id) => m.world.models[id]?.current),
     count: m.world.modelLibrary.cache.size,
   }));
@@ -149,11 +151,12 @@ test("complete upload pack uses player, otter, buildings, tree, lake and fence w
     "tree",
     "lake",
     "fence",
-    "resident",
-    "manager",
-    "postman",
   ]);
   expect(loaded.count).toBe(30);
+  await page.evaluate(
+    () =>
+      new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
   await page.keyboard.down("d");
   await expect
     .poll(() => inspect(page, (m) => m.world.models.player?.current?.role))
@@ -212,9 +215,6 @@ test("complete upload pack uses player, otter, buildings, tree, lake and fence w
     lake: m.world.blocked(24, -18),
     fences: m.world.outdoor.children.filter(
       (o) => o.userData.uploadedRole === "fence",
-      "resident",
-      "manager",
-      "postman",
     ).length,
   }));
   expect(targets.oldPond).toBe(0);

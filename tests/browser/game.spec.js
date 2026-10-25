@@ -62,13 +62,11 @@ test("image failures, transparent PNG, storage quota feedback and paused Korean 
   page,
 }) => {
   await start(page, 4);
-  await page
-    .locator("#image-input")
-    .setInputFiles({
-      name: "bad.png",
-      mimeType: "image/png",
-      buffer: Buffer.from("invalid"),
-    });
+  await page.locator("#image-input").setInputFiles({
+    name: "bad.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("invalid"),
+  });
   await expect(page.locator("#toast")).toContainText("이미지 크기");
   await picture(page, { transparent: true });
   expect(
@@ -164,8 +162,6 @@ test("residents introduce themselves once and keep distinct scoped story and qui
     [-4, 1, "강과 마을 문화", "물결과 강가"],
     [19, -11, "호수 생태", "야생 생물"],
     [4, -6, "사실과 전설", "전해 내려오는"],
-    [16, 9, "쓰레기와 생활", "빈 음료 캔"],
-    [3, 6, "주민 의견과 편지", "불편한 길"],
   ]) {
     await act(page, x, z, "동물 친구", false);
     await expect(
@@ -181,7 +177,22 @@ test("residents introduce themselves once and keep distinct scoped story and qui
     await expect(page.locator(".modal-body h3")).toContainText(word);
     await close(page);
   }
-  await act(page, 3, 6, "동물 친구", false);
+  for (const [x, z, topic, word] of [
+    [16, 9, "쓰레기와 생활", "빈 음료 캔"],
+    [4, 8, "주민 의견과 편지", "불편한 길"],
+  ]) {
+    await act(page, x, z, "", false);
+    await expect(page.locator("#intro-next")).toHaveCount(0);
+    await page.locator("#story").click();
+    const text = await page.locator(".modal-body>p").first().textContent();
+    expect(seen.has(text)).toBe(false);
+    seen.add(text);
+    await page.locator("#topic-quiz").click();
+    await expect(page.locator(".modal-header h2")).toContainText(topic);
+    await expect(page.locator(".modal-body h3")).toContainText(word);
+    await close(page);
+  }
+  await act(page, 4, 8, "우체통", false);
   await expect(page.locator("#intro-next")).toHaveCount(0);
   await page.locator("#quiz").click();
   for (const [i, answer] of [
@@ -200,7 +211,7 @@ test("residents introduce themselves once and keep distinct scoped story and qui
   await expect(page.locator("[data-review]")).toHaveCount(3);
   await close(page);
   await page.reload();
-  await act(page, 3, 6, "동물 친구", false);
+  await act(page, 4, 8, "우체통", false);
   await expect(page.locator("#intro-next")).toHaveCount(0);
   await page.locator("#quiz").click();
   await expect(page.locator(".modal-header h2")).toContainText("주제 마무리");
@@ -227,6 +238,7 @@ test("library, forest and apartment have own learning; letters save, escape HTML
   await close(page);
   await act(page, 0, 5, "나가기");
   await act(page, 4, 8, "우체통");
+  await page.locator("#write-letter").click();
   await page.locator('[name="recipient"]').fill("마을 주민");
   await page.locator('[name="problem"]').fill("학교 앞 안내 길");
   await page.locator('[name="alias"]').fill("초록이");
@@ -271,13 +283,13 @@ test("lake care still requires cleanup, identification and expert handover but d
   await page.locator('[data-sort="lake-paper"][data-category="종이"]').click();
   await close(page);
   await act(page, 15.5, -14, "쉼터");
-  await act(page, 14, -10, "안내원");
+  await act(page, 14, -10, "관리소");
   await page
     .getByRole("button", { name: "거리를 두고 관찰·기록하고 어른에게 알리기" })
     .click();
   await close(page);
   await act(page, 21, -8, "표본");
-  await act(page, 14, -10, "안내원");
+  await act(page, 14, -10, "관리소");
   await page
     .getByRole("button", { name: "담아 온 연습 표본 인계하기" })
     .click();
