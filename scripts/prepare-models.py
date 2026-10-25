@@ -11,7 +11,8 @@ report = [entry for entry in json.loads(existing.read_text()) if entry['id'] not
 for job in jobs:
     src=pathlib.Path(job['path']); dest=out/(job['name']+'.glb')
     preserve_geometry = job.get('preserveGeometry',job['name'] in ('school','library','apartment'))
-    texture_size = job.get('textureSize',1024 if preserve_geometry else 512)
+    polished_budgets = {'bench':6500,'tree':4000,'paving':1800,'grass':1500,'water':1500,'lotus-water':2500,'tactile':3500,'tactile-broken':3500}
+    texture_size = job.get('textureSize',1024 if preserve_geometry or job['name'] in polished_budgets else 512)
     if not job['animated'] and not preserve_geometry:
         bpy.ops.wm.read_factory_settings(use_empty=True)
         bpy.ops.import_scene.gltf(filepath=str(src))
@@ -19,6 +20,7 @@ for job in jobs:
             if obj.type=='MESH':
                 triangles=sum(len(p.vertices)-2 for p in obj.data.polygons)
                 budget = (500 if job['name'] in ('grass','paving','water','lotus-water') else 10000 if job['name']=='player-idle' else 6000 if job['name'] in ('school','library','apartment','lake','otter-idle','turtle-idle','crane-idle') else 1200 if job['name'] in ('tree','fence') else 2500)
+                budget=job.get('triangleBudget',polished_budgets.get(job['name'],budget))
                 if triangles>budget:
                     mod=obj.modifiers.new('Web simplification','DECIMATE'); mod.ratio=budget/triangles
         # Resize before export to avoid embedding huge original textures.

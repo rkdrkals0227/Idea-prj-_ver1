@@ -109,5 +109,14 @@ export async function publish(page, name = "우리 생태 친구") {
     .getByRole("checkbox", { name: "배경 제거 결과를 확인했어요" })
     .check();
   await page.getByRole("button", { name: "마을에 등록하기" }).click();
-  await expect(page.locator(".overlay")).toHaveCount(0);
+  await expect(page.locator(".overlay")).toHaveCount(0, { timeout: 15000 });
+}
+
+export async function sortBag(page) {
+  await page.locator('[data-page="bag"]').click();
+  await page.locator("#sort-from-bag").click();
+}
+export async function lakeCare(page) {
+  await act(page, 19, -11, "동물 친구");
+  await page.locator("#lake-care").click();
 }

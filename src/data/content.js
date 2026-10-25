@@ -73,7 +73,7 @@ export const sources = [
 export const defaults = {
   guardianLegend: defaultGuardianLegend,
   quizRoutingVersion: 2,
-  schoolName: "금산새봄학교",
+  schoolName: "금호초등학교",
   className: "4학년 마을탐험반",
   meetingDate: "2026-10-23",
   topic: "누구나 편안한 우리 마을",
@@ -120,7 +120,7 @@ export const defaults = {
       story:
         "나는 가상의 남생이 느루야. 실제 생물은 거리를 두고 관찰해 줘. 내 등장이 실제 서식의 증거는 아니야.",
       before: "호숫가 쉼터를 함께 돌봐 줄래? 생물 관리는 전문가에게 맡기자.",
-      during: "쓰레기는 분류하고, 생태 관리소에서 지정한 연습 표본만 인계해 줘.",
+      during: "쓰레기는 분류하고, 전문가가 지정한 연습 표본만 인계해 줘.",
       after: "호수가 깨끗해졌어! 실제 생물은 잡거나 옮기지 말고 관찰·기록하자.",
     },
     crane: {
@@ -308,7 +308,7 @@ export const defaults = {
   },
 };
 export const habitats = {
-  river: { name: "남강 생태 전시", x: -14, z: 10, r: 2 },
+  river: { name: "물가", x: -14, z: 10, r: 2 },
   lake: { name: "호숫가", x: 18, z: -8, r: 2 },
   forest: { name: "숲", x: -18, z: -14, r: 3 },
   grass: { name: "풀밭", x: -14, z: 10, r: 3 },

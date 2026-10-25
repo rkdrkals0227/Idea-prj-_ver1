@@ -17,8 +17,8 @@ export const guardianStamps = [
     id: "ecology",
     name: "생태 수호대",
     icon: "♧",
-    description: "그림에 이름과 보호 약속을 적고 남강 생태 전시에 등록하기",
-    location: "남강 · 생태 지도 전시 공간",
+    description: "그림에 이름과 보호 약속을 적고 우리 반 생태 지도에 등록하기",
+    location: "우리 반 생태 지도",
   },
 ];
 export const defaultGuardianLegend = {

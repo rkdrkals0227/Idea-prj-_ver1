@@ -133,8 +133,8 @@ export const extraQuizzes = [
   question(
     "q-sort-can",
     "house",
-    "꽃담 주택가",
-    "빈 음료 캔을 주웠어요. 이 게임에서 알맞은 수거함은?",
+    "햇살 아파트 주변",
+    "빈 음료 캔을 주웠어요. 가방에서 어떤 재질로 분류할까요?",
     ["종이", "금속", "플라스틱"],
     1,
     "게임의 예시 기준에서 캔은 금속이에요. 실제 배출은 우리 지역 안내를 확인해요.",
@@ -142,7 +142,7 @@ export const extraQuizzes = [
   question(
     "q-trash-danger",
     "house",
-    "꽃담 주택가",
+    "햇살 아파트 주변",
     "깨진 유리 조각을 발견했어요. 어떻게 할까요?",
     ["맨손으로 주워요", "장난감처럼 만져요", "다가가지 않고 어른에게 알려요"],
     2,
@@ -151,7 +151,7 @@ export const extraQuizzes = [
   question(
     "q-trash-prevent",
     "house",
-    "꽃담 주택가",
+    "햇살 아파트 주변",
     "깨끗해진 골목을 유지하려면?",
     [
       "쓰레기를 정해진 방법으로 버리고 다시 버리지 않아요",
@@ -199,7 +199,7 @@ export const extraQuizzes = [
   question(
     "q-library-date",
     "library",
-    "작은 도서관",
+    "도서관",
     "오래된 생태 조사 자료를 읽을 때 함께 적어야 할 것은?",
     ["조사연도와 출처", "친구의 생일", "책 표지 색만"],
     0,
@@ -208,7 +208,7 @@ export const extraQuizzes = [
   question(
     "q-library-observation",
     "library",
-    "작은 도서관",
+    "도서관",
     "친구가 올린 생물 그림은 어떤 자료일까요?",
     [
       "현재 마을의 모든 개체 수를 증명해요",
@@ -221,7 +221,7 @@ export const extraQuizzes = [
   question(
     "q-library-opinion",
     "library",
-    "작은 도서관",
+    "도서관",
     "“나는 호숫가가 가장 좋아”는 어떤 문장일까요?",
     [
       "정답을 정해야 하는 사실 문제",
@@ -234,7 +234,7 @@ export const extraQuizzes = [
   question(
     "q-forest-trail",
     "forest",
-    "월아산이 보이는 숲길",
+    "월아산",
     "숲길 옆에 작은 싹이 올라왔어요. 어떻게 걸을까요?",
     [
       "싹을 밟아 길을 넓혀요",
@@ -247,7 +247,7 @@ export const extraQuizzes = [
   question(
     "q-forest-sound",
     "forest",
-    "월아산이 보이는 숲길",
+    "월아산",
     "숲에서 새소리를 자세히 듣고 싶어요. 좋은 방법은?",
     [
       "큰 소리로 계속 불러요",
@@ -260,7 +260,7 @@ export const extraQuizzes = [
   question(
     "q-forest-record",
     "forest",
-    "월아산이 보이는 숲길",
+    "월아산",
     "숲에서 관찰한 것을 기록할 때 알맞은 것은?",
     [
       "본 시간·장소·특징을 적고 모르는 것은 모른다고 써요",
@@ -335,6 +335,13 @@ export function quizPool(content, context) {
 // Upgrade old browser content once. Preserve teacher wording, review status and IDs.
 export function upgradeQuizContent(content) {
   const c = structuredClone(content);
+  if (c.schoolName === "금산새봄학교") c.schoolName = "금호초등학교";
+  if (
+    c.dialogues?.turtle?.during ===
+    "쓰레기는 분류하고, 생태 관리소에서 지정한 연습 표본만 인계해 줘."
+  )
+    c.dialogues.turtle.during =
+      "쓰레기는 분류하고, 전문가가 지정한 연습 표본만 인계해 줘.";
   if (c && typeof c === "object" && c.guardianLegend === undefined)
     c.guardianLegend = structuredClone(defaultGuardianLegend);
   for (const [id, theme] of Object.entries(residentThemes)) {
@@ -343,6 +350,20 @@ export function upgradeQuizContent(content) {
   }
 
   if (!Array.isArray(c?.quizzes)) return c;
+  for (const q of c.quizzes) {
+    if (q.contexts?.includes("library") && q.place === "작은 도서관") q.place = "도서관";
+    if (q.contexts?.includes("forest") && q.place === "월아산이 보이는 숲길") q.place = "월아산";
+    if (
+      ["q-sort-can", "q-trash-danger", "q-trash-prevent"].includes(q.id) &&
+      q.place === "꽃담 주택가"
+    )
+      q.place = "햇살 아파트 주변";
+    if (
+      q.id === "q-sort-can" &&
+      q.question === "빈 음료 캔을 주웠어요. 이 게임에서 알맞은 수거함은?"
+    )
+      q.question = "빈 음료 캔을 주웠어요. 가방에서 어떤 재질로 분류할까요?";
+  }
   for (const q of c.quizzes)
     if (q.contexts === undefined)
       q.contexts = [...(defaultQuizContexts[q.id] || [])];

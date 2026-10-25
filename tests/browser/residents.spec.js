@@ -69,10 +69,12 @@ test("exactly three residents walk real routes, stop nearby and retain functiona
     page.getByRole("heading", { name: "동물 친구와 첫 만남", exact: true }),
   ).toBeVisible();
   await close(page);
-  await act(page, 16, 9, "게시판");
-  await expect(page.getByRole("dialog")).toContainText("주택가");
+  await act(page, 18, 1.8, "아파트");
+  await page.getByRole("button", { name: "아파트 생활 문제 살펴보기" }).click();
+  await expect(page.getByRole("dialog")).toContainText("아파트");
   await close(page);
-  await act(page, 14, -10, "관리소");
+  await act(page, 19, -11, "동물 친구");
+  await page.locator("#lake-care").click();
   await expect(page.locator("#protect")).toBeVisible();
   await close(page);
   await act(page, 4, 8, "우체통");

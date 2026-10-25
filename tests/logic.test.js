@@ -252,3 +252,30 @@ test("legend content cannot be completed without meeting the turtle friend after
   s.guardian.legendSeen = defaultGuardianLegend.pages.map((p) => p.id);
   assert.equal(answerLegend(s, defaultGuardianLegend, 0), "locked");
 });
+
+test("removed-place quiz defaults migrate while teacher custom wording survives", async () => {
+  const { upgradeQuizContent } = await import("../src/data/learning.js");
+  const c = structuredClone(defaults);
+  c.quizzes.find((q) => q.id === "q-sort-can").place = "꽃담 주택가";
+  c.quizzes.find((q) => q.id === "q-sort-can").question =
+    "빈 음료 캔을 주웠어요. 이 게임에서 알맞은 수거함은?";
+  c.quizzes.find((q) => q.id === "q-trash-danger").place =
+    "선생님이 정한 관찰 장소";
+  c.quizzes.find((q) => q.id === "q-library-date").place = "작은 도서관";
+  c.quizzes.find((q) => q.id === "q-forest-trail").place = "월아산이 보이는 숲길";
+  const next = upgradeQuizContent(c);
+  assert.equal(next.quizzes.find((q) => q.id === "q-library-date").place, "도서관");
+  assert.equal(next.quizzes.find((q) => q.id === "q-forest-trail").place, "월아산");
+  assert.equal(
+    next.quizzes.find((q) => q.id === "q-sort-can").place,
+    "햇살 아파트 주변",
+  );
+  assert.match(
+    next.quizzes.find((q) => q.id === "q-sort-can").question,
+    /가방/,
+  );
+  assert.equal(
+    next.quizzes.find((q) => q.id === "q-trash-danger").place,
+    "선생님이 정한 관찰 장소",
+  );
+});

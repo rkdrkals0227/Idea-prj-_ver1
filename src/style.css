@@ -1015,3 +1015,48 @@ fieldset {
   max-width: 80%;
   text-align: center;
 }
+
+.place-bubble {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -100%);
+  padding: 12px 22px;
+  border-radius: 20px;
+  background: #fffbee;
+  color: #315747;
+  font-size: 19px;
+  font-weight: 800;
+  box-shadow: 0 4px 16px #31574722;
+  pointer-events: none;
+  white-space: nowrap;
+  border: 2px solid #e2dcb4;
+}
+.place-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: calc(50% - 10px);
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid #fffbee;
+}
+.map-art-card {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  text-align: left;
+}
+.map-art-card img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  background: #e9efd9;
+  border-radius: 12px;
+}
+.nav-btn.current-goal {
+  outline: 3px solid #e5bf4f;
+  animation: current-goal 1.6s ease-in-out infinite;
+}
+.reduce-motion .nav-btn.current-goal {
+  animation: none;
+}

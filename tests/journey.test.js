@@ -124,3 +124,34 @@ test("a pledge and explicit local exhibition are required; importing or deleting
   journey.reconcileExhibits(s, []);
   assert.equal(journey.journeyLevel(s), 4);
 });
+
+test("collected road waste points to bag and stage4 points to the single ecology map", async () => {
+  const { objective } = await import("../src/journey.js");
+  const { initialState } = await import("../src/logic.js");
+  const { defaults } = await import("../src/data/content.js");
+  const s = initialState();
+  s.journey.schoolReady = true;
+  s.path = true;
+  s.completed = ["path"];
+  s.collected = defaults.waste
+    .filter((w) => w.zone === "village")
+    .map((w) => w.id);
+  assert.equal(objective(s, defaults, null).id, "bag");
+  s.completed.push("trash");
+  s.guardian.legendQuizPassed = true;
+  assert.equal(objective(s, defaults, null).id, "eco-map");
+  assert.equal(objective(s, defaults, null).ui, true);
+});
+
+test("tracked trash locations follow remaining items and switch to bag instead of deleted board", () => {
+  const s = initialState();
+  assert.equal(typeof journey.activityTarget, "function");
+  assert.equal(journey.activityTarget(s, defaults, "trash").id, "waste:can");
+  s.collected = defaults.waste
+    .filter((w) => w.zone === "village")
+    .map((w) => w.id);
+  assert.deepEqual(journey.activityTarget(s, defaults, "trash"), {
+    id: "bag",
+    ui: true,
+  });
+});

@@ -12,15 +12,6 @@ const C = {
   green: 0x5d9872,
   water: 0x84c7cc,
 };
-// Put the newest local work on the front-center board, clear of the trees.
-const exhibitSlots = [
-  [-14.3, 16.1],
-  [-10.6, 16.1],
-  [-18, 16.1],
-  [-14.3, 13],
-  [-10.6, 13],
-  [-18, 13],
-];
 const mats = new Map();
 function mat(c) {
   if (!mats.has(c))
@@ -67,6 +58,7 @@ function label(text, color = "#315747") {
 export class World {
   constructor(host, { interact, near, warning, state, content }) {
     this.callbacks = { interact, near, warning };
+    this.host = host;
     this.state = state;
     this.content = content;
     this.keys = new Set();
@@ -92,6 +84,11 @@ export class World {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.append(this.renderer.domElement);
+    this.placeBubble = document.createElement("div");
+    this.placeBubble.className = "place-bubble";
+    this.placeBubble.hidden = true;
+    this.placeBubble.setAttribute("role", "status");
+    host.append(this.placeBubble);
     this.canvas = this.renderer.domElement;
     this.canvas.setAttribute("aria-label", "금산마을 3D 탐험 화면");
     this.canvas.tabIndex = 0;
@@ -223,21 +220,25 @@ export class World {
     obj.position.set(x, 0, z);
     const npc = ["otter", "turtle", "crane"].includes(id);
     const displayTitle = npc ? "동물 친구 · 이야기하기" : title;
-    if (
-      [
-        "path",
-        "bins",
-        "mailbox",
-        "eco-map",
-        "forest",
-        "rest",
-        "exhibition",
-        "neighborhood",
-        "eco-station",
-      ].includes(id)
-    )
-      this.signpost(id, title, x, z - 0.6, 3.2);
-    this.entities.push({ id, title: displayTitle, x, z, obj, tag: null });
+    const bubbleTitle =
+      id === "school"
+        ? this.content.schoolName
+        : {
+            library: "도서관",
+            apartment: "햇살 아파트",
+            rest: "금호지",
+            forest: "월아산",
+            mailbox: "우체통",
+          }[id];
+    this.entities.push({
+      id,
+      title: displayTitle,
+      x,
+      z,
+      obj,
+      tag: null,
+      bubbleTitle,
+    });
     return obj;
   }
   building(id, title, color) {
@@ -279,10 +280,6 @@ export class World {
     shape("box", 0x805d48, [1.2, 1.9, 0.12], [0, 0.95, d / 2 + 0.08], g);
     shape("box", 0xf5e9cb, [2, 0.18, 1], [0, 0.09, d / 2 + 0.45], g);
     this.block(x, z, w, d);
-    const sign = this.physicalSign(title, Math.min(w * 0.8, 4.5), 0.9);
-    sign.position.set(0, 2.7, d / 2 + 0.09);
-    g.add(sign);
-    this.signpost(id, title, x + w / 2 + 0.6, z + d / 2, 2.8);
     this.entity(
       id,
       id === "school" || id === "library" ? title + " · 들어가기" : title,
@@ -301,62 +298,6 @@ export class World {
       entry.userData.entryFor = id;
     }
     return g;
-  }
-  physicalSign(text, width = 3, height = 0.8) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 320;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#fff8df";
-    ctx.fillRect(0, 0, 1024, 320);
-    ctx.strokeStyle = "#917651";
-    ctx.lineWidth = 18;
-    ctx.strokeRect(9, 9, 1006, 302);
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#315e4b";
-    const lines = String(text)
-      .split("\n")
-      .flatMap((line) =>
-        line.length > 22 ? [line.slice(0, 22), line.slice(22, 44)] : [line],
-      )
-      .slice(0, 3);
-    ctx.textBaseline = "middle";
-    ctx.font = `bold ${lines.length > 1 ? 86 : 150}px sans-serif`;
-    lines.forEach((line, i) =>
-      ctx.fillText(
-        line,
-        512,
-        lines.length === 1
-          ? 160
-          : lines.length === 2
-            ? 105 + i * 110
-            : 75 + i * 85,
-        950,
-      ),
-    );
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.colorSpace = THREE.SRGBColorSpace;
-    const mesh = new THREE.Mesh(
-      geo.plane,
-      new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }),
-    );
-    mesh.scale.set(width, height, 1);
-    mesh.userData.ownsTexture = true;
-    return mesh;
-  }
-  signpost(id, text, x, z, width = 3) {
-    const group = new THREE.Group();
-    group.userData.signId = id;
-    group.position.set(x, 0, z);
-    this.outdoor.add(group);
-    shape("box", 0x8c7353, [0.13, 1.8, 0.13], [-width * 0.32, 0.9, 0], group);
-    shape("box", 0x8c7353, [0.13, 1.8, 0.13], [width * 0.32, 0.9, 0], group);
-    const sign = this.physicalSign(text.split(" · ")[0], width, 1.05);
-    sign.position.set(0, 1.8, 0.4);
-    sign.userData.keepOnModel = true;
-    group.add(sign);
-    this.loadRole("sign", group);
-    return group;
   }
   animal(id) {
     const g = new THREE.Group(),
@@ -426,9 +367,8 @@ export class World {
     shape("box", 0xc58b61, [0.8, 0.8, 0.8], [0, 0.4, 0], this.pathObstacle);
     this.loadRole("wasteWrapper", this.pathObstacle);
     this.building("school", this.content.schoolName, C.roof);
-    this.building("library", "작은 도서관", 0x7fa397);
+    this.building("library", "도서관", 0x7fa397);
     this.building("apartment", "햇살 아파트", 0xb7a3bd);
-    this.building("house", "꽃담 주택", 0xdbb16e);
     this.lakeModel = new THREE.Group();
     this.lakeModel.position.set(24, 0, -18);
     this.outdoor.add(this.lakeModel);
@@ -493,24 +433,12 @@ export class World {
       entity.kind = "npc";
       this.loadRole(id, g);
     }
-    this.entity("neighborhood", "주택가 생활 게시판", 16, 9);
-    this.entity("path", "안내 길 · 살펴보기", -6, 4.7);
-    this.entity("bins", "분리수거함", 11, 10);
-    for (let i = 0; i < 3; i++)
-      shape(
-        "box",
-        [0x89a89c, 0xd2b578, 0x92a7b5][i],
-        [0.8, 1, 0.8],
-        [10 + i, 0.5, 11.4],
-        this.outdoor,
-      );
+    this.entity("path", "활동하기", -6, 4.7);
     this.entity("mailbox", "마을 우체통", 4, 8);
     shape("box", 0xb86853, [0.9, 1, 0.8], [4, 1.2, 8], this.outdoor);
     shape("cylinder", 0x826f57, [0.12, 1, 0.12], [4, 0.5, 8], this.outdoor);
-    this.entity("eco-map", "우리 반 생태 지도", -3, 8);
-    shape("box", 0x75988a, [2, 1.3, 0.18], [-3, 1.4, 8], this.outdoor);
-    this.entity("forest", "월아산이 보이는 숲길", -19, -11);
-    this.entity("rest", "남생이 쉼터", 18, -14);
+    this.entity("forest", "월아산", -19, -11);
+    this.entity("rest", "금호지", 18, -14);
     this.restTrash = shape(
       "box",
       0xe1ae7e,
@@ -518,9 +446,6 @@ export class World {
       [18, 0.15, -14],
       this.outdoor,
     );
-    this.entity("eco-station", "생태 관리소 · 연습 표본 접수", 14, -10);
-    shape("box", 0x7eaa8e, [1.4, 0.8, 0.8], [14, 0.4, -11.2], this.outdoor);
-    this.block(14, -11.2, 1.4, 0.8);
     this.specimen = shape(
       "sphere",
       0xb789a4,
@@ -553,16 +478,8 @@ export class World {
     }
     shape("box", 0x8bc2c9, [3.5, 0.08, 27], [-28, -0.02, 9], this.outdoor);
     this.block(-28, 9, 3.5, 27);
-    shape("box", 0xe1d9bb, [11, 0.08, 7], [-14, 0.01, 13], this.outdoor);
-    this.entity("exhibition", "남강 생태 지도 전시", -14, 10);
     this.posterGroup = new THREE.Group();
     this.outdoor.add(this.posterGroup);
-    for (let i = 0; i < 6; i++) {
-      const [x, z] = exhibitSlots[i];
-      shape("box", 0x9b805c, [0.12, 2, 0.15], [x - 1, 0.98, z], this.outdoor);
-      shape("box", 0x9b805c, [0.12, 2, 0.15], [x + 1, 0.98, z], this.outdoor);
-      shape("box", 0xe9e9d6, [2.5, 2, 0.12], [x, 2, z], this.outdoor);
-    }
     this.addUploadedScenery();
     this.sync(this.state);
   }
@@ -836,7 +753,6 @@ export class World {
       ...works.filter((w) => !localSet.has(w.id) && w.exhibition === "namgang"),
       ...works.filter((w) => !localSet.has(w.id) && w.exhibition !== "namgang"),
     ];
-    let displayed = 0;
     for (const a of ordered.slice(0, Math.min(30, settings.artLimit))) {
       try {
         const bitmap = await createImageBitmap(a.blob);
@@ -872,33 +788,6 @@ export class World {
         const h = habitats[a.habitat] || habitats.grass;
         group.position.set(h.x, 0, h.z);
         this.outdoor.add(group);
-        if (a.exhibition === "namgang" && displayed < 6) {
-          const [x, z] = exhibitSlots[displayed++];
-          const image = new THREE.Mesh(
-            geo.plane,
-            new THREE.MeshBasicMaterial({
-              map: texture,
-              transparent: true,
-              alphaTest: 0.03,
-              side: THREE.DoubleSide,
-            }),
-          );
-          image.scale.set(
-            (1.6 * bitmap.width) / Math.max(bitmap.width, bitmap.height),
-            (1.6 * bitmap.height) / Math.max(bitmap.width, bitmap.height),
-            1,
-          );
-          image.position.set(x, 2.1, z + 0.08);
-          image.userData.artId = a.id;
-          this.posterGroup.add(image);
-          const caption = this.physicalSign(
-            `${a.name}\n${a.protection || "보호 약속을 적어 주세요"}`,
-            2.5,
-            1.1,
-          );
-          caption.position.set(x, 0.72, z + 0.09);
-          this.posterGroup.add(caption);
-        }
         this.art.push({
           data: a,
           group,
@@ -923,7 +812,13 @@ export class World {
       [this.player.position.x, 1.3, this.player.position.z],
       this.scene,
     );
-    this.transfer = { mesh, from: mesh.position.clone(), elapsed: 0 };
+    const friend = this.entities.find((e) => e.id === "turtle");
+    this.transfer = {
+      mesh,
+      from: mesh.position.clone(),
+      to: new THREE.Vector3(friend.x, 1.1, friend.z),
+      elapsed: 0,
+    };
   }
   updateResidents(dt) {
     for (const e of this.entities.filter((e) => e.kind === "npc")) {
@@ -964,8 +859,9 @@ export class World {
   }
   setObjective(target) {
     this.activeObjective = target;
-    this.objectiveGroup.visible = !!target;
-    if (target) this.objectiveGroup.position.set(target.x, 0, target.z);
+    this.objectiveGroup.visible = !!target && !target.ui;
+    if (target && !target.ui)
+      this.objectiveGroup.position.set(target.x, 0, target.z);
   }
   updateObjective(t) {
     if (!this.objectiveGroup) return;
@@ -1011,7 +907,24 @@ export class World {
       this.ring.visible = !!near;
       if (near) this.ring.position.set(near.x, 0.07, near.z);
     }
+    this.updatePlaceBubble(near);
     return near;
+  }
+  updatePlaceBubble(near) {
+    const bubble = this.placeBubble;
+    if (this.indoor || !near?.bubbleTitle) {
+      bubble.hidden = true;
+      return;
+    }
+    const point = new THREE.Vector3(near.x, 2.6, near.z).project(this.camera);
+    bubble.hidden =
+      point.z < -1 ||
+      point.z > 1 ||
+      Math.abs(point.x) > 1 ||
+      Math.abs(point.y) > 1;
+    bubble.textContent = near.bubbleTitle;
+    bubble.style.left = `${(point.x * 0.5 + 0.5) * this.host.clientWidth}px`;
+    bubble.style.top = `${(-point.y * 0.5 + 0.5) * this.host.clientHeight}px`;
   }
   animate = () => {
     requestAnimationFrame(this.animate);
@@ -1074,7 +987,7 @@ export class World {
       const a = this.transfer;
       a.elapsed += dt;
       const f = Math.min(a.elapsed / 1.5, 1);
-      a.mesh.position.lerpVectors(a.from, new THREE.Vector3(14, 1.3, -10), f);
+      a.mesh.position.lerpVectors(a.from, a.to, f);
       a.mesh.position.y += Math.sin(f * Math.PI) * 0.8;
       if (f === 1) {
         a.mesh.removeFromParent();

@@ -19,20 +19,12 @@
   },
   "apartment": {
     "url": "models/uploaded/apartment.glb",
-    "position": [14, 0, -1],
+    "position": [18, 0, -3.2],
     "targetSize": 7,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [5, 5],
-    "footprint": [5, 5]
-  },
-  "house": {
-    "url": null,
-    "position": [20, 0, 8],
-    "targetSize": 5,
-    "rotation": 0,
-    "groundHeight": 0,
-    "collision": [5, 4]
+    "collision": [8, 7],
+    "footprint": [8, 7]
   },
   "tree": {
     "url": "models/uploaded/tree.glb",

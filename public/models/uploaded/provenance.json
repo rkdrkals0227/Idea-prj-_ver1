@@ -109,20 +109,6 @@
     "animations": []
   },
   {
-    "id": "tree",
-    "sourceFile": "09_tree.glb",
-    "originalBytes": 4625520,
-    "webBytes": 175276,
-    "animations": []
-  },
-  {
-    "id": "bench",
-    "sourceFile": "11_bench.glb",
-    "originalBytes": 3458624,
-    "webBytes": 221908,
-    "animations": []
-  },
-  {
     "id": "lamp",
     "sourceFile": "10_light.glb",
     "originalBytes": 3122280,
@@ -137,38 +123,10 @@
     "animations": []
   },
   {
-    "id": "tactile",
-    "sourceFile": "13_Braille blocks.glb",
-    "originalBytes": 3142160,
-    "webBytes": 209144,
-    "animations": []
-  },
-  {
     "id": "fence",
     "sourceFile": "14_시설물_울타리.glb",
     "originalBytes": 4398868,
     "webBytes": 164280,
-    "animations": []
-  },
-  {
-    "id": "tactile-broken",
-    "sourceFile": "15_Braille block_broken.glb",
-    "originalBytes": 3375448,
-    "webBytes": 215100,
-    "animations": []
-  },
-  {
-    "id": "paving",
-    "sourceFile": "16_tile.glb",
-    "originalBytes": 2455328,
-    "webBytes": 99788,
-    "animations": []
-  },
-  {
-    "id": "grass",
-    "sourceFile": "17_garden tile.glb",
-    "originalBytes": 4154988,
-    "webBytes": 119860,
     "animations": []
   },
   {
@@ -200,20 +158,6 @@
     "animations": []
   },
   {
-    "id": "lotus-water",
-    "sourceFile": "19_water tile_with  flower.glb",
-    "originalBytes": 4591900,
-    "webBytes": 161924,
-    "animations": []
-  },
-  {
-    "id": "water",
-    "sourceFile": "20_water tile.glb",
-    "originalBytes": 3400756,
-    "webBytes": 133220,
-    "animations": []
-  },
-  {
     "id": "school",
     "sourceFile": "05_place_school.glb",
     "originalBytes": 5217480,
@@ -238,6 +182,78 @@
     "webBytes": 4055864,
     "animations": [],
     "geometryPreserved": true,
+    "textureSize": 1024
+  },
+  {
+    "id": "tree",
+    "sourceFile": "09_tree.glb",
+    "originalBytes": 4625520,
+    "webBytes": 484556,
+    "animations": [],
+    "geometryPreserved": false,
+    "textureSize": 1024
+  },
+  {
+    "id": "bench",
+    "sourceFile": "11_bench.glb",
+    "originalBytes": 3458624,
+    "webBytes": 537180,
+    "animations": [],
+    "geometryPreserved": false,
+    "textureSize": 1024
+  },
+  {
+    "id": "tactile",
+    "sourceFile": "13_Braille blocks.glb",
+    "originalBytes": 3142160,
+    "webBytes": 380956,
+    "animations": [],
+    "geometryPreserved": false,
+    "textureSize": 1024
+  },
+  {
+    "id": "tactile-broken",
+    "sourceFile": "15_Braille block_broken.glb",
+    "originalBytes": 3375448,
+    "webBytes": 409460,
+    "animations": [],
+    "geometryPreserved": false,
+    "textureSize": 1024
+  },
+  {
+    "id": "paving",
+    "sourceFile": "16_tile.glb",
+    "originalBytes": 2455328,
+    "webBytes": 294976,
+    "animations": [],
+    "geometryPreserved": false,
+    "textureSize": 1024
+  },
+  {
+    "id": "grass",
+    "sourceFile": "17_garden tile.glb",
+    "originalBytes": 4154988,
+    "webBytes": 334072,
+    "animations": [],
+    "geometryPreserved": false,
+    "textureSize": 1024
+  },
+  {
+    "id": "lotus-water",
+    "sourceFile": "19_water tile_with  flower.glb",
+    "originalBytes": 4591900,
+    "webBytes": 492252,
+    "animations": [],
+    "geometryPreserved": false,
+    "textureSize": 1024
+  },
+  {
+    "id": "water",
+    "sourceFile": "20_water tile.glb",
+    "originalBytes": 3400756,
+    "webBytes": 347108,
+    "animations": [],
+    "geometryPreserved": false,
     "textureSize": 1024
   }
 ]

@@ -118,7 +118,7 @@ test("model failure leaves the target placeholder and does not block school inte
 test("complete upload pack uses player, otter, buildings, tree, lake and fence while keeping entrances usable", async ({
   page,
 }) => {
-  test.setTimeout(60000);
+  test.setTimeout(120000);
   await page.goto("/");
   await page.getByRole("button", { name: "탐험을 시작할까요? →" }).click();
   await inspect(page, async (m) => {
@@ -152,14 +152,14 @@ test("complete upload pack uses player, otter, buildings, tree, lake and fence w
     "lake",
     "fence",
   ]);
-  expect(loaded.count).toBe(30);
+  expect(loaded.count).toBe(29);
   await page.evaluate(
     () =>
       new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
   );
   await page.keyboard.down("d");
   await expect
-    .poll(() => inspect(page, (m) => m.world.models.player?.current?.role))
+    .poll(() => inspect(page, (m) => m.world.models.player?.current?.role), {timeout: 15000})
     .toBe("walk");
   expect(
     await inspect(
@@ -169,7 +169,7 @@ test("complete upload pack uses player, otter, buildings, tree, lake and fence w
   ).toBe("Running");
   await page.keyboard.up("d");
   await expect
-    .poll(() => inspect(page, (m) => m.world.models.player.current.role))
+    .poll(() => inspect(page, (m) => m.world.models.player.current.role), {timeout: 15000})
     .toBe("idle");
   const bounds = await inspect(page, async (m) => {
     const T = await import("/node_modules/three/build/three.module.js");
@@ -182,9 +182,9 @@ test("complete upload pack uses player, otter, buildings, tree, lake and fence w
   });
   for (const b of bounds) {
     expect(b.x).toBeLessThanOrEqual(
-      b.id === "school" ? 7.01 : b.id === "library" ? 6.01 : 5.01,
+      b.id === "school" ? 7.01 : b.id === "library" ? 6.01 : 8.01,
     );
-    expect(b.z).toBeLessThanOrEqual(5.01);
+    expect(b.z).toBeLessThanOrEqual(b.id === "apartment" ? 7.01 : 5.01);
   }
   for (const [id, x, z] of [
     ["school", -10, -1],

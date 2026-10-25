@@ -17,8 +17,8 @@ export const levels = [
   },
   {
     id: 4,
-    title: "남강 · 생태 지도 전시",
-    description: "그림에 이름과 보호 약속을 붙여 남강 생태 전시에 등록해요.",
+    title: "우리 반 생태 지도",
+    description: "지도에 그림·이름·보호 약속을 등록해요.",
   },
 ];
 export function initialJourney() {
@@ -177,9 +177,27 @@ export function objective(s, content, indoor) {
     );
     return w
       ? { id: "waste:" + w.id, x: w.x, z: w.z }
-      : { id: "bins", x: 11, z: 10 };
+      : { id: "bag", ui: true };
   }
   if (level === 3) return { id: "turtle", x: 19, z: -11 };
-  if (level === 4) return { id: "exhibition", x: -14, z: 10 };
+  if (level === 4) return { id: "eco-map", ui: true };
+  return null;
+}
+
+export function activityTarget(s, content, id) {
+  if (id === "path") return { id: "path", x: -6, z: 4.7 };
+  if (id === "lake") return { id: "turtle", x: 19, z: -11 };
+  if (id === "trash") {
+    if (s.completed.includes("trash")) return null;
+    const w = content.waste.find(
+      (w) =>
+        w.zone === "village" &&
+        !s.collected.includes(w.id) &&
+        !s.sorted.includes(w.id),
+    );
+    return w
+      ? { id: "waste:" + w.id, x: w.x, z: w.z }
+      : { id: "bag", ui: true };
+  }
   return null;
 }

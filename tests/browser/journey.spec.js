@@ -66,7 +66,7 @@ test("buildings use physical signs, animals have no floating name sprites and th
     };
   });
   expect(visuals.npcNameSprites).toBe(0);
-  expect(visuals.schoolSign).toBe(true);
+  expect(visuals.schoolSign).toBe(false);
   expect(visuals.objective).toBe("school");
 });
 
@@ -132,7 +132,9 @@ test("Namgang exhibition requires the creature name and protection pledge and ap
       ),
     };
   });
-  expect(data.poster).toBe(true);
+  expect(data.poster).toBe(false);
+  await page.locator('[data-page="map"]').first().click();
+  await expect(page.locator("[data-art]")).toContainText("남강의 수달 그림");
   expect(data.work).toContain("거리를");
 });
 
@@ -163,7 +165,7 @@ test("all four levels play in sequence with weekly checks, road solving, legend 
   await expect(page.locator("#level-title")).toContainText("레벨 2");
   await expect(page.locator(".weekly-grid")).toContainText("오늘 통행로");
   await page.locator("#school-next").click();
-  await act(page, -6, 4.7, "안내 길");
+  await act(page, -6, 4.7, "활동하기");
   await page.locator("#check").click();
   await expect(page.locator("#path-feedback")).toContainText("상자");
   await page.locator("#obstacle").click();
@@ -176,7 +178,8 @@ test("all four levels play in sequence with weekly checks, road solving, legend 
     [16, 5],
   ])
     await act(page, x, z);
-  await act(page, 11, 10, "분리수거함");
+  await page.locator('[data-page="bag"]').click();
+  await page.locator("#sort-from-bag").click();
   for (const [id, category] of [
     ["can", "금속"],
     ["paper", "종이"],
@@ -305,7 +308,7 @@ test("own newly published artwork and pledge stay visible despite many imported 
     const id = works.find((w) => w.name === "내가 전시한 친구").id;
     return {
       awarded: state.journey.exhibitIds.includes(id),
-      visible: world.posterGroup.children.some((o) => o.userData.artId === id),
+      visible: world.art.some((o) => o.data.id === id),
     };
   });
   expect(shown.awarded).toBe(true);
@@ -316,36 +319,26 @@ test("own newly published artwork and pledge stay visible despite many imported 
     .toContainText("먹이를 주지 않고 거리를 두고 관찰해요");
 });
 
-test("the newest own exhibition board is visibly in front rather than hidden behind blank boards or trees", async ({
+test("newest work remains readable in the single ecology map without physical poster boards", async ({
   page,
 }) => {
-  const { start, picture, publish, move } = await import("./helpers.js");
+  const { start, picture, publish } = await import("./helpers.js");
   await start(page, 4);
   await picture(page);
   await publish(page, "가리지 않는 작품");
-  await move(page, -14, 9);
-  const visible = await page.evaluate(async () => {
-    const { world, works } = await import(
-      document.querySelector('script[type="module"][src*="/src/main.js"]').src
-    );
-    const { Raycaster } = await import(
-      "/node_modules/three/build/three.module.js"
-    );
-    world.camera.position.set(-1, 21, 32);
-    world.scene.updateMatrixWorld(true);
-    const id = works.find((w) => w.name === "가리지 않는 작품").id,
-      target = world.posterGroup.children.find((o) => o.userData.artId === id),
-      point = target.getWorldPosition(world.player.position.clone());
-    const ray = new Raycaster(
-      world.camera.position,
-      point.sub(world.camera.position).normalize(),
-    );
-    const meshes = [];
-    world.outdoor.traverse((o) => {
-      if (o.isMesh) meshes.push(o);
-    });
-    const hit = ray.intersectObjects(meshes, false)[0];
-    return hit?.object.userData.artId === id;
-  });
-  expect(visible).toBe(true);
+  await page.locator('[data-page="map"]').first().click();
+  await expect(
+    page.getByRole("heading", { name: "우리 반 생태 지도", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("[data-art]")).toContainText("가리지 않는 작품");
+  await expect(page.locator("[data-map-image]")).toHaveJSProperty(
+    "naturalWidth",
+    120,
+  );
+  expect(
+    await page.evaluate(async () => {
+      const { world } = await import("/src/main.js");
+      return world.posterGroup.children.length;
+    }),
+  ).toBe(0);
 });

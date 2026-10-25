@@ -1,5 +1,14 @@
 import { test, expect } from "@playwright/test";
-import { start, move, act, close, picture, publish } from "./helpers.js";
+import {
+  start,
+  move,
+  act,
+  close,
+  picture,
+  publish,
+  sortBag,
+  lakeCare,
+} from "./helpers.js";
 test.setTimeout(90000);
 
 test("drawings preserve interior white, resize large images, restore and synchronize edits/deletion", async ({
@@ -33,7 +42,6 @@ test("drawings preserve interior white, resize large images, restore and synchro
   await page.getByRole("button", { name: "변경 저장" }).click();
   await page.getByRole("button", { name: "지도 위치" }).click();
   await expect(page.locator("[data-art]")).toContainText("호수 나비");
-  await close(page);
   const ids = await page.evaluate(async () => {
     const { world, works } = await import(
       document.querySelector('script[type="module"][src*="/src/main.js"]').src
@@ -41,10 +49,11 @@ test("drawings preserve interior white, resize large images, restore and synchro
     return [
       works[0].id,
       world.art[0].data.id,
-      world.posterGroup.children.find((o) => o.userData.artId)?.userData.artId,
+      document.querySelector("[data-art]")?.dataset.art,
     ];
   });
   expect(new Set(ids).size).toBe(1);
+  await close(page);
   await page.locator('[data-page="catalog"]').click();
   const dl = page.waitForEvent("download");
   await page.getByRole("button", { name: "학급 작품 묶음 내보내기" }).click();
@@ -225,7 +234,7 @@ test("library, forest and apartment have own learning; letters save, escape HTML
   await page.locator("#quiz").click();
   await expect(page.locator(".modal-body h3")).toContainText("숲길 옆");
   await close(page);
-  await act(page, 14, 3, "아파트");
+  await act(page, 18, 1.8, "아파트");
   await page.locator("#quiz").click();
   await expect(page.locator(".modal-body h3")).toContainText("아파트 복도");
   await close(page);
@@ -276,20 +285,20 @@ test("lake care still requires cleanup, identification and expert handover but d
     [17, -11],
   ])
     await act(page, x, z);
-  await act(page, 11, 10, "분리수거함");
+  await sortBag(page);
   await page.locator('[data-sort="lake-can"][data-category="종이"]').click();
   await expect(page.locator(".result").first()).toContainText("금속");
   await page.locator('[data-sort="lake-can"][data-category="금속"]').click();
   await page.locator('[data-sort="lake-paper"][data-category="종이"]').click();
   await close(page);
-  await act(page, 15.5, -14, "쉼터");
-  await act(page, 14, -10, "관리소");
+  await act(page, 15.5, -14, "금호지");
+  await lakeCare(page);
   await page
     .getByRole("button", { name: "거리를 두고 관찰·기록하고 어른에게 알리기" })
     .click();
   await close(page);
   await act(page, 21, -8, "표본");
-  await act(page, 14, -10, "관리소");
+  await lakeCare(page);
   await page
     .getByRole("button", { name: "담아 온 연습 표본 인계하기" })
     .click();
