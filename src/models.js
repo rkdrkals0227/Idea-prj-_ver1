@@ -42,9 +42,11 @@ export function fitModel(source, cfg = {}) {
     Math.max(size.x, size.y, size.z) <= 0
   )
     throw new Error("유효하지 않은 모델 크기");
-  const scale = cfg.targetHeight
-    ? cfg.targetHeight / size.y
-    : (cfg.targetSize || 1) / Math.max(size.x, size.y, size.z);
+  const scale = cfg.footprint
+    ? Math.min(cfg.footprint[0] / size.x, cfg.footprint[1] / size.z)
+    : cfg.targetHeight
+      ? cfg.targetHeight / size.y
+      : (cfg.targetSize || 1) / Math.max(size.x, size.y, size.z);
   const s = cfg.fit
     ? new THREE.Vector3(...cfg.fit).divide(size)
     : new THREE.Vector3(scale, scale, scale);

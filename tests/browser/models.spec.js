@@ -54,13 +54,17 @@ test("uploaded characters and scenery load with real geometry and state-specific
       timeout: 15000,
     })
     .toBe("idle");
-  const repaired = await inspect(page, m => {
+  const repaired = await inspect(page, (m) => {
     m.state.path = true;
-    m.state.collected.push('paper');
+    m.state.collected.push("paper");
     m.world.sync(m.state);
-    return {broken:m.world.brokenTile.visible,fixed:m.world.fixedTile.visible,paper:m.world.entities.find(e=>e.id==='waste:paper').obj.visible};
+    return {
+      broken: m.world.brokenTile.visible,
+      fixed: m.world.fixedTile.visible,
+      paper: m.world.entities.find((e) => e.id === "waste:paper").obj.visible,
+    };
   });
-  expect(repaired).toEqual({broken:false,fixed:true,paper:false});
+  expect(repaired).toEqual({ broken: false, fixed: true, paper: false });
   expect(errors).toEqual([]);
 });
 test("model failure leaves the target placeholder and does not block school interaction", async ({
@@ -74,15 +78,26 @@ test("model failure leaves the target placeholder and does not block school inte
       timeout: 60000,
     })
     .toBe("fallback");
-  const fallback = await inspect(page, async m => {
+  const fallback = await inspect(page, async (m) => {
     await m.world.modelsReady;
     const actor = m.world.models.turtle;
-    actor.setState('walk');
-    const overlap = actor.fallback.some(o => o.visible);
-    actor.setState('greet');actor.update(6);
-    return {overlap,idle:actor.current === null,placeholder:actor.fallback.some(o => o.visible),greet:actor.variants.get('greet').wrapper.visible};
+    actor.setState("walk");
+    const overlap = actor.fallback.some((o) => o.visible);
+    actor.setState("greet");
+    actor.update(6);
+    return {
+      overlap,
+      idle: actor.current === null,
+      placeholder: actor.fallback.some((o) => o.visible),
+      greet: actor.variants.get("greet").wrapper.visible,
+    };
   });
-  expect(fallback).toEqual({overlap:false,idle:true,placeholder:true,greet:false});
+  expect(fallback).toEqual({
+    overlap: false,
+    idle: true,
+    placeholder: true,
+    greet: false,
+  });
   await page.keyboard.press("e");
   await expect(page.locator("#place")).toContainText("학교");
   const meshes = await inspect(
@@ -93,4 +108,117 @@ test("model failure leaves the target placeholder and does not block school inte
         .obj.children.filter((o) => o.visible).length,
   );
   expect(meshes).toBeGreaterThan(0);
+});
+
+test("complete upload pack uses player, otter, buildings, tree, lake and fence while keeping entrances usable", async ({
+  page,
+}) => {
+  test.setTimeout(60000);
+  await page.goto("/");
+  await page.getByRole("button", { name: "탐험을 시작할까요? →" }).click();
+  await inspect(page, async (m) => {
+    m.world.configure({ ...m.state.settings, quality: "low" });
+    await m.world.modelsReady;
+  });
+  const loaded = await inspect(page, (m) => ({
+    roles: [
+      "player",
+      "otter",
+      "turtle",
+      "crane",
+      "school",
+      "library",
+      "apartment",
+      "tree",
+      "lake",
+      "fence",
+      "resident",
+      "manager",
+      "postman",
+    ].filter((id) => m.world.models[id]?.current),
+    count: m.world.modelLibrary.cache.size,
+  }));
+  expect(loaded.roles).toEqual([
+    "player",
+    "otter",
+    "turtle",
+    "crane",
+    "school",
+    "library",
+    "apartment",
+    "tree",
+    "lake",
+    "fence",
+    "resident",
+    "manager",
+    "postman",
+  ]);
+  expect(loaded.count).toBe(30);
+  await page.keyboard.down("d");
+  await expect
+    .poll(() => inspect(page, (m) => m.world.models.player?.current?.role))
+    .toBe("walk");
+  expect(
+    await inspect(
+      page,
+      (m) => m.world.models.player.current.action.getClip().name,
+    ),
+  ).toBe("Running");
+  await page.keyboard.up("d");
+  await expect
+    .poll(() => inspect(page, (m) => m.world.models.player.current.role))
+    .toBe("idle");
+  const bounds = await inspect(page, async (m) => {
+    const T = await import("/node_modules/three/build/three.module.js");
+    return ["school", "library", "apartment"].map((id) => {
+      const a = m.world.models[id],
+        box = new T.Box3().setFromObject(a.current.wrapper),
+        s = box.getSize(new T.Vector3());
+      return { id, x: s.x, z: s.z };
+    });
+  });
+  for (const b of bounds) {
+    expect(b.x).toBeLessThanOrEqual(
+      b.id === "school" ? 7.01 : b.id === "library" ? 6.01 : 5.01,
+    );
+    expect(b.z).toBeLessThanOrEqual(5.01);
+  }
+  for (const [id, x, z] of [
+    ["school", -10, -1],
+    ["library", 1, -6],
+  ]) {
+    await inspect(page, (m) => {
+      if (m.world.indoor) m.world.exit();
+    });
+    await page.evaluate(
+      async ({ x, z }) => {
+        const { world } = await import("/src/main.js");
+        world.player.position.set(x, 0, z);
+      },
+      { x, z },
+    );
+    await page.keyboard.press("e");
+    await expect.poll(() => inspect(page, (m) => m.world.indoor)).toBe(id);
+    await inspect(page, (m) => m.world.player.position.set(0, 0, 5.6));
+    await page.keyboard.press("e");
+    await expect.poll(() => inspect(page, (m) => m.world.indoor)).toBe(null);
+  }
+  const targets = await inspect(page, (m) => ({
+    school: m.world.blocked(-10, -5),
+    oldPond: m.world.outdoor.children.filter(
+      (o) =>
+        o.isMesh && o.position.x === 24 && o.position.z === -18 && o.visible,
+    ).length,
+    lake: m.world.blocked(24, -18),
+    fences: m.world.outdoor.children.filter(
+      (o) => o.userData.uploadedRole === "fence",
+      "resident",
+      "manager",
+      "postman",
+    ).length,
+  }));
+  expect(targets.oldPond).toBe(0);
+  expect(targets.school).toBe(true);
+  expect(targets.lake).toBe(true);
+  expect(targets.fences).toBeGreaterThan(0);
 });

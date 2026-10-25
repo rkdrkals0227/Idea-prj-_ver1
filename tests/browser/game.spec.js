@@ -156,6 +156,8 @@ test("missing GLB keeps the physical school, collision and class meeting usable"
 test("residents introduce themselves once and keep distinct scoped story and quiz topics", async ({
   page,
 }) => {
+  // Five NPC lessons, quiz completion and a full model reload on software WebGL.
+  test.setTimeout(150000);
   await start(page, 3);
   const seen = new Set();
   for (const [x, z, topic, word] of [

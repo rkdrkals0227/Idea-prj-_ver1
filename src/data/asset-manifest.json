@@ -1,31 +1,30 @@
 {
   "school": {
-    "url": null,
+    "url": "models/uploaded/school.glb",
     "position": [-10, 0, -5],
     "targetSize": 7,
     "rotation": 0,
     "groundHeight": 0,
     "collision": [7, 5],
-    "animations": {
-      "idle": "Idle",
-      "walk": "Walk"
-    }
+    "footprint": [7, 5]
   },
   "library": {
-    "url": null,
+    "url": "models/uploaded/library.glb",
     "position": [1, 0, -10],
     "targetSize": 6,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [6, 5]
+    "collision": [6, 5],
+    "footprint": [6, 5]
   },
   "apartment": {
-    "url": null,
+    "url": "models/uploaded/apartment.glb",
     "position": [14, 0, -1],
     "targetSize": 7,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [5, 5]
+    "collision": [5, 5],
+    "footprint": [5, 5]
   },
   "house": {
     "url": null,
@@ -36,22 +35,33 @@
     "collision": [5, 4]
   },
   "tree": {
-    "url": null,
+    "url": "models/uploaded/tree.glb",
     "targetSize": 3.8,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [1, 1]
+    "collision": [1, 1],
+    "targetHeight": 3.8
   },
   "otter": {
-    "url": null,
+    "url": "models/uploaded/otter-idle.glb",
     "position": [-4, 0, 1],
     "targetSize": 1.8,
     "rotation": 0,
     "groundHeight": 0,
     "collision": [1, 1],
-    "animations": {
-      "idle": "Idle",
-      "walk": "Walk"
+    "targetHeight": 1.8,
+    "variants": {
+      "idle": {
+        "url": "models/uploaded/otter-idle.glb"
+      },
+      "walk": {
+        "url": "models/uploaded/otter-walk.glb",
+        "clip": "Walking"
+      },
+      "greet": {
+        "url": "models/uploaded/otter-greet.glb",
+        "clip": "Big_Wave_Hello"
+      }
     }
   },
   "turtle": {
@@ -77,17 +87,16 @@
     }
   },
   "crane": {
-    "url": "models/uploaded/crane-greet.glb",
+    "url": "models/uploaded/crane-idle.glb",
     "position": [4, 0, -6],
     "targetSize": 2,
     "rotation": 0,
     "groundHeight": 0,
     "collision": [1, 1],
-    "targetHeight": 2,
+    "targetHeight": 2.0,
     "variants": {
       "idle": {
-        "url": "models/uploaded/crane-greet.glb",
-        "clip": "Idle_15"
+        "url": "models/uploaded/crane-idle.glb"
       },
       "walk": {
         "url": "models/uploaded/crane-walk.glb",
@@ -100,23 +109,43 @@
     }
   },
   "postman": {
-    "url": null,
+    "url": "models/uploaded/otter-idle.glb",
     "position": [3, 0, 6],
     "targetSize": 1.8,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [1, 1]
+    "collision": [1, 1],
+    "targetHeight": 1.8,
+    "variants": {
+      "idle": {
+        "url": "models/uploaded/otter-idle.glb"
+      },
+      "walk": {
+        "url": "models/uploaded/otter-walk.glb",
+        "clip": "Walking"
+      },
+      "greet": {
+        "url": "models/uploaded/otter-greet.glb",
+        "clip": "Big_Wave_Hello"
+      }
+    }
   },
   "player": {
-    "url": null,
+    "url": "models/uploaded/player-idle.glb",
     "position": [-10, 0, 1],
     "targetSize": 1.7,
     "rotation": 0,
     "groundHeight": 0,
     "collision": [0.7, 0.7],
-    "animations": {
-      "idle": "Idle",
-      "walk": "Walk"
+    "targetHeight": 1.7,
+    "variants": {
+      "idle": {
+        "url": "models/uploaded/player-idle.glb"
+      },
+      "walk": {
+        "url": "models/uploaded/player-walk.glb",
+        "clip": "Running"
+      }
     }
   },
   "lamp": {
@@ -209,5 +238,72 @@
     "groundHeight": 0.065,
     "fit": [3, 0.15, 3],
     "tile": true
+  },
+  "lake": {
+    "url": "models/uploaded/lake.glb",
+    "position": [24, 0, -18],
+    "fit": [16, 0.85, 12],
+    "groundHeight": -0.12,
+    "rotation": 0,
+    "collision": [16, 12]
+  },
+  "fence": {
+    "url": "models/uploaded/fence.glb",
+    "fit": [3, 1.1, 0.3],
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [3, 0.3],
+    "placements": [
+      [-15, -9],
+      [-12, -9],
+      [-9, -9],
+      [17, 12],
+      [20, 12],
+      [23, 12]
+    ]
+  },
+  "resident": {
+    "url": "models/uploaded/otter-idle.glb",
+    "position": [16, 0, 9],
+    "targetSize": 1.8,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [1, 1],
+    "targetHeight": 1.8,
+    "variants": {
+      "idle": {
+        "url": "models/uploaded/otter-idle.glb"
+      },
+      "walk": {
+        "url": "models/uploaded/otter-walk.glb",
+        "clip": "Walking"
+      },
+      "greet": {
+        "url": "models/uploaded/otter-greet.glb",
+        "clip": "Big_Wave_Hello"
+      }
+    }
+  },
+  "manager": {
+    "url": "models/uploaded/crane-idle.glb",
+    "position": [14, 0, -10],
+    "targetSize": 2,
+    "rotation": 0,
+    "groundHeight": 0,
+    "collision": [1, 1],
+    "targetHeight": 2.0,
+    "variants": {
+      "idle": {
+        "url": "models/uploaded/crane-idle.glb"
+      },
+      "walk": {
+        "url": "models/uploaded/crane-walk.glb",
+        "clip": "Walking"
+      },
+      "greet": {
+        "url": "models/uploaded/crane-greet.glb",
+        "clip": "Big_Wave_Hello"
+      }
+    }
   }
 }

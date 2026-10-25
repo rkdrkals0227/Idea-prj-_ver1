@@ -3,6 +3,8 @@ import { existsSync } from "node:fs";
 export default defineConfig({
   testDir: "./tests/browser",
   workers: 1,
+  // Full model reloads on software WebGL need more than the old 30s default.
+  timeout: 60000,
   use: {
     baseURL: "http://127.0.0.1:5173",
     viewport: { width: 1440, height: 960 },

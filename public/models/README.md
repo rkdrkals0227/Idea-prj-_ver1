@@ -1,10 +1,10 @@
 # 금산마을 모델
 
-현재 연결한 파일은 `uploaded/` 아래의 최적화된 18개 GLB입니다.
-`uploaded/provenance.json`에 원본 첨부 파일명, 파일 크기, 클립 이름을 기록했습니다.
+최신 첨부 GLB30개를 모두 연결했습니다. 웹용 사본은 `uploaded/` 아래에 있습니다.
+`uploaded/provenance.json`에 실제 첨부 파일명·크기·애니메이션을 기록했습니다.
 
 설정: `src/data/asset-manifest.json`
-자세한 역할 대응과 32MiB 초과로 아직 받지 못한 12개 파일: `docs/MODELS.md`
+상세 연결/크기/공유 역할/검증 안내: `docs/MODELS.md`
 
-새 GLB/glTF는 이 폴더에 넣고 public 기준 상대 경로를 설정합니다.
-glTF 외부 텍스처/버퍼는 원래 상대 경로를 유지합니다.
+원본은 수정하지 않습니다. 새 GLB/glTF는 public 기준 상대 경로를 설정하고,
+glTF의 외부 텍스처/버퍼는 원래 상대 경로를 유지해 함께 넣습니다.

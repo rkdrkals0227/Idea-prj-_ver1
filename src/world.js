@@ -298,6 +298,16 @@ export class World {
       z + d / 2 + 1.5,
     );
     this.loadRole(id, g);
+    if (id === "school" || id === "library") {
+      const entry = shape(
+        "box",
+        0xf6e2a6,
+        [2.2, 0.1, 1.4],
+        [x, 0.07, z + d / 2 + 0.8],
+        this.outdoor,
+      );
+      entry.userData.entryFor = id;
+    }
     return g;
   }
   physicalSign(text, width = 3, height = 0.8) {
@@ -427,22 +437,19 @@ export class World {
     this.building("library", "작은 도서관", 0x7fa397);
     this.building("apartment", "햇살 아파트", 0xb7a3bd);
     this.building("house", "꽃담 주택", 0xdbb16e);
-    const pond = shape(
-      "cylinder",
-      C.water,
-      [8, 0.12, 6],
-      [24, -0.01, -18],
-      this.outdoor,
-    );
-    this.block(24, -18, 16, 12);
-    const shore = shape(
+    this.lakeModel = new THREE.Group();
+    this.lakeModel.position.set(24, 0, -18);
+    this.outdoor.add(this.lakeModel);
+    shape("cylinder", C.water, [8, 0.12, 6], [0, -0.01, 0], this.lakeModel);
+    shape(
       "cylinder",
       0xd7c997,
       [8.5, 0.06, 6.5],
-      [24, -0.09, -18],
-      this.outdoor,
+      [0, -0.09, 0],
+      this.lakeModel,
     );
-    shore.receiveShadow = true;
+    this.loadRole("lake", this.lakeModel);
+    this.block(24, -18, 16, 12);
     for (let i = 0; i < 3; i++) {
       const m = shape(
         "cone",
@@ -491,6 +498,7 @@ export class World {
     const npc = this.animal("otter");
     this.outdoor.add(npc);
     this.entity("resident", "밤톨 · 주택가 주민", 16, 9, npc);
+    this.loadRole("resident", npc);
     this.entity("path", "안내 길 · 살펴보기", -6, 4.7);
     this.entity("bins", "분리수거함", 11, 10);
     for (let i = 0; i < 3; i++)
@@ -515,10 +523,10 @@ export class World {
       [18, 0.15, -14],
       this.outdoor,
     );
-    this.entity("manager", "생태 안내원 · 연습 표본 인계", 14, -10);
     const manager = this.animal("crane");
-    manager.position.set(14, 0, -10);
     this.outdoor.add(manager);
+    this.entity("manager", "생태 안내원 · 연습 표본 인계", 14, -10, manager);
+    this.loadRole("manager", manager);
     this.specimen = shape(
       "sphere",
       0xb789a4,
@@ -658,12 +666,14 @@ export class World {
       for (const x of [0, 2]) if (z < 2 || z > 4) paving.push([x, z]);
     for (let z = -4; z <= 0; z += 2) paving.push([-10, z]);
     for (let x = 10; x <= 26; x += 2) paving.push([x, -10]);
-    for (let x = 18; x <= 30; x += 3)
-      for (let z = -21; z <= -15; z += 3) {
-        if (Math.hypot((x - 24) / 8, (z + 18) / 6) < 0.9)
-          (x === 24 && z === -18 ? lotus : water).push([x, z]);
-      }
-    for (let z = -1; z <= 20; z += 3) water.push([-28, z]);
+    if (!manifest.lake?.url) {
+      for (let x = 18; x <= 30; x += 3)
+        for (let z = -21; z <= -15; z += 3)
+          if (Math.hypot((x - 24) / 8, (z + 18) / 6) < 0.9)
+            (x === 24 && z === -18 ? lotus : water).push([x, z]);
+    }
+    for (let z = -1; z <= 20; z += 3)
+      (z === 8 || z === 17 ? lotus : water).push([-28, z]);
     this.tileBatch("grass", grass);
     this.tileBatch("paving", paving);
     this.tileBatch("water", water);
@@ -682,6 +692,11 @@ export class World {
     ]) {
       this.prop("bench", x, z);
       this.block(x, z, 2.1, 0.8);
+    }
+    for (const [x, z] of manifest.fence?.placements || []) {
+      this.prop("fence", x, z);
+      const [w, d] = manifest.fence.collision;
+      this.block(x, z, w, d);
     }
     this.tactileTiles = [];
     for (let i = 0; i < 9; i++)
@@ -997,7 +1012,7 @@ export class World {
     this.player.position.y = length && !reduced ? Math.sin(t * 14) * 0.06 : 0;
     this.models.player?.setState(length ? "walk" : "idle");
     for (const [id, actor] of Object.entries(this.models)) {
-      if (["otter", "turtle", "crane"].includes(id)) {
+      if (["otter", "turtle", "crane", "resident", "manager"].includes(id)) {
         const entity = this.entities.find((e) => e.id === id);
         const patrol =
           this.moveEnabled &&
@@ -1015,6 +1030,8 @@ export class World {
             : 0;
         }
       }
+      if (id === "postman" && actor.current?.role !== "greet")
+        actor.setState(this.delivery ? "walk" : "idle");
       actor.update(
         reduced && actor.current?.role !== "greet" ? 0 : animationDt,
       );

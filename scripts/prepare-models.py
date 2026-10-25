@@ -16,7 +16,7 @@ for job in jobs:
         for obj in bpy.context.scene.objects:
             if obj.type=='MESH':
                 triangles=sum(len(p.vertices)-2 for p in obj.data.polygons)
-                budget = 500 if job['name'] in ('grass','paving','water','lotus-water') else 2500
+                budget = (500 if job['name'] in ('grass','paving','water','lotus-water') else 10000 if job['name']=='player-idle' else 6000 if job['name'] in ('school','library','apartment','lake','otter-idle','turtle-idle','crane-idle') else 1200 if job['name'] in ('tree','fence') else 2500)
                 if triangles>budget:
                     mod=obj.modifiers.new('Web simplification','DECIMATE'); mod.ratio=budget/triangles
         # Resize before export to avoid embedding huge original textures.

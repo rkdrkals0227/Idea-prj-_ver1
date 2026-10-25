@@ -1,9 +1,44 @@
 [
   {
-    "id": "turtle-walk",
-    "sourceFile": "03_ npc_남생이_ 걷기.glb",
-    "originalBytes": 28821088,
-    "webBytes": 765380,
+    "id": "otter-idle",
+    "sourceFile": "02_ npc_otter_stop.glb",
+    "originalBytes": 3666952,
+    "webBytes": 346828,
+    "animations": []
+  },
+  {
+    "id": "player-idle",
+    "sourceFile": "01_appleking_stop.glb",
+    "originalBytes": 2058244,
+    "webBytes": 415224,
+    "animations": []
+  },
+  {
+    "id": "player-walk",
+    "sourceFile": "01_appleking_walk.glb",
+    "originalBytes": 2216656,
+    "webBytes": 571224,
+    "animations": [
+      "Running"
+    ]
+  },
+  {
+    "id": "otter-greet",
+    "sourceFile": "02_npc_ otter_hi.glb",
+    "originalBytes": 2312488,
+    "webBytes": 1012560,
+    "animations": [
+      "Running",
+      "Walking",
+      "Big_Wave_Hello",
+      "Hello_Run"
+    ]
+  },
+  {
+    "id": "otter-walk",
+    "sourceFile": "02_npc_ otter_walk.glb",
+    "originalBytes": 1894248,
+    "webBytes": 594324,
     "animations": [
       "Running",
       "Walking"
@@ -11,9 +46,9 @@
   },
   {
     "id": "turtle-greet",
-    "sourceFile": "03_npc_ 남생이_ 인사.glb",
-    "originalBytes": 29011752,
-    "webBytes": 955896,
+    "sourceFile": "03_npc_ turtle_hi.glb",
+    "originalBytes": 1871724,
+    "webBytes": 704500,
     "animations": [
       "Running",
       "Walking",
@@ -21,17 +56,27 @@
     ]
   },
   {
+    "id": "turtle-walk",
+    "sourceFile": "03_ npc_turtle_walk.glb",
+    "originalBytes": 1694884,
+    "webBytes": 527656,
+    "animations": [
+      "Running",
+      "Walking"
+    ]
+  },
+  {
     "id": "turtle-idle",
-    "sourceFile": "03_npc_남생이 정지.glb",
-    "originalBytes": 22782500,
-    "webBytes": 191196,
+    "sourceFile": "03_npc_turtle_stop.glb",
+    "originalBytes": 3284904,
+    "webBytes": 320776,
     "animations": []
   },
   {
     "id": "crane-greet",
-    "sourceFile": "04_npc_ 학 인사.glb",
-    "originalBytes": 21767596,
-    "webBytes": 1675728,
+    "sourceFile": "04_npc_ bird_hi.glb",
+    "originalBytes": 2296268,
+    "webBytes": 1412396,
     "animations": [
       "Running",
       "Walking",
@@ -40,104 +85,153 @@
     ]
   },
   {
+    "id": "crane-idle",
+    "sourceFile": "04_npc_학 정지.glb",
+    "originalBytes": 4591892,
+    "webBytes": 393156,
+    "animations": []
+  },
+  {
     "id": "crane-walk",
-    "sourceFile": "04_npc_학 걷기.glb",
-    "originalBytes": 21336632,
-    "webBytes": 1244912,
+    "sourceFile": "04_npc_bird_walk.glb",
+    "originalBytes": 1891984,
+    "webBytes": 1008108,
     "animations": [
       "Running",
       "Walking"
     ]
   },
   {
-    "id": "lamp",
-    "sourceFile": "10_light.glb",
-    "originalBytes": 16480564,
-    "webBytes": 190260,
+    "id": "school",
+    "sourceFile": "05_place_school.glb",
+    "originalBytes": 5217480,
+    "webBytes": 450796,
+    "animations": []
+  },
+  {
+    "id": "library",
+    "sourceFile": "06_place_library.glb",
+    "originalBytes": 5063276,
+    "webBytes": 418544,
+    "animations": []
+  },
+  {
+    "id": "apartment",
+    "sourceFile": "07_place_apartment.glb",
+    "originalBytes": 5341156,
+    "webBytes": 463212,
+    "animations": []
+  },
+  {
+    "id": "lake",
+    "sourceFile": "08_place_lake.glb",
+    "originalBytes": 4955948,
+    "webBytes": 433268,
+    "animations": []
+  },
+  {
+    "id": "tree",
+    "sourceFile": "09_tree.glb",
+    "originalBytes": 4625520,
+    "webBytes": 175276,
     "animations": []
   },
   {
     "id": "bench",
     "sourceFile": "11_bench.glb",
-    "originalBytes": 20912580,
-    "webBytes": 222240,
+    "originalBytes": 3458624,
+    "webBytes": 221908,
     "animations": []
   },
   {
-    "id": "tactile",
-    "sourceFile": "13_Braille blocks.glb",
-    "originalBytes": 14805508,
-    "webBytes": 208684,
-    "animations": []
-  },
-  {
-    "id": "tactile-broken",
-    "sourceFile": "15_Braille block_broken.glb",
-    "originalBytes": 17721492,
-    "webBytes": 216256,
-    "animations": []
-  },
-  {
-    "id": "paving",
-    "sourceFile": "16_tile.glb",
-    "originalBytes": 12316272,
-    "webBytes": 99488,
-    "animations": []
-  },
-  {
-    "id": "grass",
-    "sourceFile": "17_garden tile.glb",
-    "originalBytes": 23735008,
-    "webBytes": 123384,
-    "animations": []
-  },
-  {
-    "id": "waste-paper",
-    "sourceFile": "18_1_paper trash.glb",
-    "originalBytes": 19829404,
-    "webBytes": 154580,
-    "animations": []
-  },
-  {
-    "id": "waste-bottle",
-    "sourceFile": "18_2_bottle.glb",
-    "originalBytes": 14800500,
-    "webBytes": 179712,
-    "animations": []
-  },
-  {
-    "id": "waste-can",
-    "sourceFile": "18_3_ can.glb",
-    "originalBytes": 22453816,
-    "webBytes": 245200,
-    "animations": []
-  },
-  {
-    "id": "waste-wrapper",
-    "sourceFile": "18_4_ trash.glb",
-    "originalBytes": 16744976,
-    "webBytes": 225684,
+    "id": "lamp",
+    "sourceFile": "10_light.glb",
+    "originalBytes": 3122280,
+    "webBytes": 191444,
     "animations": []
   },
   {
     "id": "sign",
     "sourceFile": "12_Information Sign.glb",
-    "originalBytes": 20304840,
-    "webBytes": 200308,
+    "originalBytes": 3369952,
+    "webBytes": 202396,
     "animations": []
   },
   {
-    "id": "water",
-    "sourceFile": "20_water tile.glb",
-    "originalBytes": 14779692,
-    "webBytes": 132160,
+    "id": "tactile",
+    "sourceFile": "13_Braille blocks.glb",
+    "originalBytes": 3142160,
+    "webBytes": 209144,
+    "animations": []
+  },
+  {
+    "id": "fence",
+    "sourceFile": "14_시설물_울타리.glb",
+    "originalBytes": 4398868,
+    "webBytes": 164280,
+    "animations": []
+  },
+  {
+    "id": "tactile-broken",
+    "sourceFile": "15_Braille block_broken.glb",
+    "originalBytes": 3375448,
+    "webBytes": 215100,
+    "animations": []
+  },
+  {
+    "id": "paving",
+    "sourceFile": "16_tile.glb",
+    "originalBytes": 2455328,
+    "webBytes": 99788,
+    "animations": []
+  },
+  {
+    "id": "grass",
+    "sourceFile": "17_garden tile.glb",
+    "originalBytes": 4154988,
+    "webBytes": 119860,
+    "animations": []
+  },
+  {
+    "id": "waste-paper",
+    "sourceFile": "18_1_paper trash.glb",
+    "originalBytes": 2948856,
+    "webBytes": 155532,
+    "animations": []
+  },
+  {
+    "id": "waste-bottle",
+    "sourceFile": "18_2_bottle.glb",
+    "originalBytes": 3052080,
+    "webBytes": 180700,
+    "animations": []
+  },
+  {
+    "id": "waste-can",
+    "sourceFile": "18_3_ can.glb",
+    "originalBytes": 3713480,
+    "webBytes": 247012,
+    "animations": []
+  },
+  {
+    "id": "waste-wrapper",
+    "sourceFile": "18_4_ trash.glb",
+    "originalBytes": 3555344,
+    "webBytes": 226300,
     "animations": []
   },
   {
     "id": "lotus-water",
     "sourceFile": "19_water tile_with  flower.glb",
-    "originalBytes": 24070008,
-    "webBytes": 165396,
+    "originalBytes": 4591900,
+    "webBytes": 161924,
+    "animations": []
+  },
+  {
+    "id": "water",
+    "sourceFile": "20_water tile.glb",
+    "originalBytes": 3400756,
+    "webBytes": 133220,
     "animations": []
   }
 ]

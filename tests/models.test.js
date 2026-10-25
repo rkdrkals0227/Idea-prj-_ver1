@@ -92,3 +92,13 @@ test("single-file legacy manifest keeps idle and walking animation roles", async
     },
   );
 });
+
+test("building footprint fitting preserves proportions and stays inside collision width and depth", () => {
+  const model = fitModel(mesh(), { footprint: [3, 2] });
+  const size = new THREE.Box3()
+    .setFromObject(model)
+    .getSize(new THREE.Vector3());
+  assert.ok(Math.abs(size.x - 3) < 1e-6);
+  assert.ok(Math.abs(size.y - 6) < 1e-6);
+  assert.ok(size.z <= 2);
+});
