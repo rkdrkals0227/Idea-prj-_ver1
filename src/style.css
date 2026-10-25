@@ -1108,3 +1108,10 @@ html[data-day-phase=dusk] .sun {background:#e5ad7d;}
 .sr-only {position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 @media(max-width:1000px){.brand h1{font-size:.9rem;}.brand-mark{display:none;}.location{font-size:.7rem;}.activity-chip{font-size:.65rem;padding:12px;}.tools-toggle{padding:12px;font-size:.75rem;}.quest-card{top:96px;width:205px;}.storybook{grid-template-columns:1fr;}.story-art{max-width:350px;margin:auto;}.story-page{padding:0;}#legend-text{font-size:1rem;}}
 @media(max-width:650px){.topbar{flex-wrap:wrap;gap:5px;}.brand{padding:8px 12px;}.location{padding:8px 10px;}.activity-chip{order:4;padding:7px 10px;}.tools-toggle{padding:8px 10px;}.quest-card{width:180px;top:125px;padding:12px;}.quest-card #level-goal{font-size:.66rem;}.quest-card .level-row{padding:8px;}.sidebar{top:115px;right:12px;}.class-chalkboard{padding:15px 12px;border-width:7px;}.copy-line{gap:4px;}.copy-line input{font-size:.87rem;padding:10px 6px;}.copy-line button{font-size:.7rem;padding:8px;}.storybook{padding:12px;}.controls-hint{display:none;}}
+.mission-briefings {display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0;text-align:left;}
+.mission-briefing {padding:18px;background:#f6f4e5;border:1px solid #e0e5cd;border-radius:18px;}
+.mission-briefing>span {font-size:.72rem;font-weight:700;color:#788962;}
+.mission-briefing h3 {font-size:1rem;color:#365e4b;margin:12px 0;line-height:1.6;}
+.mission-briefing p {font-size:.83rem;line-height:1.9;margin:0;word-break:keep-all;}
+.briefing-finale {padding:17px 20px;background:#e6eed6;border-radius:16px;line-height:1.8;font-size:.85rem;}
+@media(max-width:700px){.mission-briefings{grid-template-columns:1fr;gap:8px;}.mission-briefing{padding:12px 15px;}.mission-briefing h3{margin:6px 0;}}

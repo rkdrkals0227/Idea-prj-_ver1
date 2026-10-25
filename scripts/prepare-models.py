@@ -10,7 +10,7 @@ replaced = {job['name'] for job in jobs}
 report = [entry for entry in json.loads(existing.read_text()) if entry['id'] not in replaced] if existing.exists() else []
 for job in jobs:
     src=pathlib.Path(job['path']); dest=out/(job['name']+'.glb')
-    preserve_geometry = job.get('preserveGeometry',job['name'] in ('school','library','apartment'))
+    preserve_geometry = job.get('preserveGeometry',job['name'] in ('school','library','apartment','lake'))
     polished_budgets = {'bench':6500,'tree':4000,'paving':1800,'grass':1500,'water':1500,'lotus-water':2500,'tactile':3500,'tactile-broken':3500}
     texture_size = job.get('textureSize',1024 if preserve_geometry or job['name'] in polished_budgets else 512)
     if not job['animated'] and not preserve_geometry:

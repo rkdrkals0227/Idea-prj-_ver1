@@ -1,12 +1,15 @@
 export function normalizeRule(text) {
-  return String(text ?? '').normalize('NFC').replace(/[\s.,!?。·，]/gu,'');
+  return String(text ?? '').normalize('NFKC').replace(/[^\p{L}\p{M}\p{N}]/gu,'');
 }
 export function rulesComplete(state,content) {
   return (content.classRules?.rules || []).every(r=>normalizeRule(state.journey.ruleCopies?.[r.id])===normalizeRule(r.text));
 }
 export function copyRule(state,id,text,content) {
   const rule=content.classRules?.rules.find(r=>r.id===id);
-  if(!rule || normalizeRule(text)!==normalizeRule(rule.text))return false;
+  if(!rule)return false;
+  const expected=normalizeRule(rule.text);
+  const withoutList=String(text??'').normalize('NFKC').replace(/^\s*[\p{P}\p{S}]*\s*\p{N}+\s*(?:번)?[\p{P}\p{S}\s]*/u,'');
+  if(normalizeRule(text)!==expected && normalizeRule(withoutList)!==expected)return false;
   state.journey.ruleCopies ||= {};
   state.journey.ruleCopies[id]=rule.text;
   return true;

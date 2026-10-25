@@ -41,7 +41,7 @@ test("uploaded characters and scenery load with real geometry and state-specific
   expect(result.crane).toEqual(
     expect.arrayContaining(["idle", "walk", "greet"]),
   );
-  expect(result.tiles).toEqual([]);
+  expect(result.tiles).toEqual(["tactile"]);
   expect(await inspect(page,m=>!!m.world.nature.ground&&!!m.world.nature.stream)).toBe(true);
   expect(result.loaded.every(([, s]) => s === "loaded")).toBe(true);
   await inspect(page, (m) => {
@@ -181,9 +181,9 @@ test("complete upload pack uses player, otter, buildings, tree, lake and fence w
   });
   for (const b of bounds) {
     expect(b.x).toBeLessThanOrEqual(
-      b.id === "school" ? 7.01 : b.id === "library" ? 6.01 : 8.01,
+      b.id === "school" ? 7.01 : b.id === "library" ? 6.01 : 11.01,
     );
-    expect(b.z).toBeLessThanOrEqual(b.id === "apartment" ? 7.01 : 5.01);
+    expect(b.z).toBeLessThanOrEqual(b.id === "apartment" ? 9.51 : 5.01);
   }
   for (const [id, x, z] of [
     ["school", -10, -1],

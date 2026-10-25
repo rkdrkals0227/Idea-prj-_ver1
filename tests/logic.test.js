@@ -35,9 +35,9 @@ test("path requires every tile, direction and no obstruction", () => {
   assert.equal(pathValid(p, p, true), false);
   assert.equal(pathValid(p, p, false), true);
   const bad = structuredClone(p);
-  bad[1].rotation = 90;
+  bad[1].rotation += 90;
   assert.equal(pathValid(bad, p, false), false);
-  bad[1].rotation = 180;
+  bad[1].rotation = p[1].rotation + 180;
   assert.equal(pathValid(bad, p, false), true);
   bad[2].type = "empty";
   assert.equal(pathValid(bad, p, false), false);

@@ -102,3 +102,10 @@ test("building footprint fitting preserves proportions and stays inside collisio
   assert.ok(Math.abs(size.y - 6) < 1e-6);
   assert.ok(size.z <= 2);
 });
+test('lake material overrides are local to the fitted model and geometry sits above terrain',()=>{
+ const source=mesh();source.children[0].material=new THREE.MeshStandardMaterial();const original=source.children[0].material;
+ const model=fitModel(source,{fit:[16,1.35,12],groundHeight:.03,materialOverrides:{metalness:0,roughness:.85,normalScale:.25},castShadow:false});
+ let loaded;model.traverse(o=>{if(o.isMesh)loaded=o});
+ assert.notEqual(loaded.material,original);assert.equal(loaded.material.metalness,0);assert.equal(loaded.material.roughness,.85);assert.equal(loaded.material.normalScale.x,.25);assert.equal(loaded.castShadow,false);
+ assert.ok(new THREE.Box3().setFromObject(model).min.y>=.029);
+});

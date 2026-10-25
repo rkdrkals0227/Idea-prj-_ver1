@@ -18,3 +18,16 @@ export function validateTactile(t) {
   }
  });
 }
+
+// Dense visual path; lesson cells represent longer sections of this same L-shaped road.
+export function schoolRoadRoute(manifest) {
+ const school=manifest.school,apt=manifest.apartment;
+ const start=[school.position[0],school.position[2]+school.collision[1]/2+1.5];
+ const end=[apt.position[0],apt.position[2]+apt.collision[1]/2+1.8];
+ const points=[start,[start[0],end[1]],end],route=[];
+ for(let j=0;j<2;j++){
+  const a=points[j],b=points[j+1],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.9);
+  for(let i=j?1:0;i<=n;i++){const f=i/n;route.push({x:a[0]+(b[0]-a[0])*f,z:a[1]+(b[1]-a[1])*f,type:i===0||i===n?'dot':'line',rotation:a[0]===b[0]?90:0})}
+ }
+ return route;
+}

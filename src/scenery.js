@@ -9,7 +9,7 @@ export function naturalTerrain(group) {
  function trail(points,width){ctx.lineCap='round';ctx.lineJoin='round';for(const [w,color] of [[width+.6,'#a6b77b80'],[width+.25,'#c3c69a'],[width,'#d8c9a6'],[width-.5,'#ddcfae']]){ctx.beginPath();points.forEach((p,i)=>{const [x,y]=point(p);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y)});ctx.strokeStyle=color;ctx.lineWidth=w*sx;ctx.stroke()}}
  trail([[-24,3],[-14,2.9],[-3,3.15],[10,3],[19,3.1],[26,3]],4);
  trail([[1,-18],[1.15,-8],[1,2],[1.1,13]],4);trail([[-10,-5],[-10,0],[-9.8,3]],2.8);trail([[10,-10],[18,-10],[26,-10]],2.7);
- trail([[-9,3],[-1,3],[-1,7],[-9,7]],1.4);
+ // The repaired route follows the main school-to-apartment road.
  for(let i=0;i<16000;i++){const x=random()*c.width,y=random()*c.height;ctx.strokeStyle=i%3?'#75955712':'#fff5d31b';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(random()-.5)*3,y-1-random()*2);ctx.stroke()}
  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
  const ground=new THREE.Mesh(new THREE.PlaneGeometry(66,56),new THREE.MeshStandardMaterial({map:texture,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=.005;ground.receiveShadow=true;ground.userData.naturalTerrain=true;group.add(ground);

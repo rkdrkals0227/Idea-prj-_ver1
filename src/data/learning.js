@@ -337,6 +337,10 @@ export function quizPool(content, context) {
 export function upgradeQuizContent(content) {
   const c = structuredClone(content);
   if(c.classRules === undefined) c.classRules=structuredClone(classRules);
+  if(c.classRules.source === "선생님이 제공한 학급 회의 결과") c.classRules.source=classRules.source;
+  const oldU=c.tactile;
+  const oldUCells=[[0,0,"dot",0],[1,0,"line",0],[2,0,"line",0],[3,0,"line",0],[4,0,"dot",0],[4,1,"line",90],[4,2,"dot",0],[3,2,"line",0],[2,2,"line",0],[1,2,"line",0],[0,2,"dot",0]];
+  if(oldU?.cols===5 && oldU.rows===3 && oldU.text === "학교 앞에서 모퉁이를 돌아 이어지는 길이에요. 선형은 이동 방향, 점형은 주의·방향이 바뀌는 곳을 살펴보는 게임용 표시예요. 실제 설계·시공 기준은 아니며 시설 수리는 담당 기관이 해요." && oldU.solution?.length===11 && oldUCells.every(([col,row,type,rotation],i)=>{const t=oldU.solution[i];return t?.col===col&&t.row===row&&t.type===type&&t.rotation===rotation}))c.tactile=structuredClone(expandedTactile);
   if(c.tactile?.layoutVersion===undefined && Array.isArray(c.tactile?.solution) && c.tactile.solution.length===5 && c.tactile.solution.every((t,i)=>t?.type===(i===0||i===4?"dot":"line") && t.rotation===0 && t.col===undefined && t.row===undefined) && c.tactile?.text === "게임용 직선 연결 체험이에요. 실제 시설 수리는 담당 기관이 해요. 선형은 방향을 안내하고 점형은 주의를 알리는 역할을 해요. 아래 배치는 실제 시공 기준이 아니며 교사의 검토가 필요해요.") c.tactile=structuredClone(expandedTactile);
   if (c.schoolName === "금산새봄학교") c.schoolName = "금호초등학교";
   if (

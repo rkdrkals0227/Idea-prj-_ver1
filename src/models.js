@@ -63,7 +63,15 @@ export function fitModel(source, cfg = {}) {
   );
   wrapper.traverse((o) => {
     if (o.isMesh) {
-      o.castShadow = !cfg.tile;
+      o.castShadow = cfg.castShadow ?? !cfg.tile;
+      if(cfg.materialOverrides){
+        const adjust=original=>{const m=original.clone(),v=cfg.materialOverrides;
+          if(Number.isFinite(v.metalness))m.metalness=v.metalness;
+          if(Number.isFinite(v.roughness))m.roughness=v.roughness;
+          if(Number.isFinite(v.normalScale)&&m.normalScale)m.normalScale.setScalar(v.normalScale);
+          return m;};
+        o.material=Array.isArray(o.material)?o.material.map(adjust):adjust(o.material);
+      }
       o.receiveShadow = true;
     }
   });

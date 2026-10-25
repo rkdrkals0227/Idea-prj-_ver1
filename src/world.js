@@ -1,3 +1,4 @@
+import {schoolRoadRoute} from "./tactile.js";
 import { naturalTerrain, decorateClassroom, riverAt } from "./scenery.js";
 import { dayPhase } from "./experience.js";
 import { residentIds, createPatrol, stepPatrol } from "./patrol.js";
@@ -547,8 +548,9 @@ export class World {
           );
           instances.receiveShadow = true;
           const matrix = new THREE.Matrix4();
-          positions.forEach(([x, z], i) => {
-            matrix.makeTranslation(x, 0, z);
+          positions.forEach(([x, z, angle=0], i) => {
+            matrix.makeRotationY(angle);
+            matrix.setPosition(x, 0, z);
             matrix.multiply(mesh.matrixWorld);
             instances.setMatrixAt(i, matrix);
           });
@@ -590,7 +592,7 @@ export class World {
     // Uploaded terrain tiles are retained as assets; organic terrain replaces their grid.
     for (const [x, z] of [
       [-14, 3],
-      [6, 3],
+      [6, 5.8],
       [23, 4],
       [-5, -10],
     ])
@@ -609,21 +611,21 @@ export class World {
       this.block(x, z, w, d);
     }
     this.tactileTiles = [];
-    const route=this.content.tactile.solution;
-    const position=(t,i)=>Number.isInteger(t.col)?[-9+t.col*2,3+t.row*2]:[-9+i*2,3];
-    route.forEach((t,i)=>{
-      const [x,z]=position(t,i),g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=t.rotation*Math.PI/180;this.outdoor.add(g);
-      if(i===1){
+    this.tactileRoute=schoolRoadRoute(manifest);
+    const brokenIndex=this.tactileRoute.reduce((best,t,i)=>Math.abs(t.x+5)+Math.abs(t.z-3)<Math.abs(this.tactileRoute[best].x+5)+Math.abs(this.tactileRoute[best].z-3)?i:best,0),lines=[];
+    this.tactileRoute.forEach((t,i)=>{
+      if(i!==brokenIndex && t.type==='line'){lines.push([t.x,t.z,t.rotation*Math.PI/180]);return}
+      const g=new THREE.Group();g.position.set(t.x,0,t.z);g.rotation.y=t.rotation*Math.PI/180;this.outdoor.add(g);
+      if(i===brokenIndex){
         this.brokenTile=g;this.loadRole("tactileBroken",g);
-        this.fixedTile=new THREE.Group();this.fixedTile.position.set(x,0,z);this.outdoor.add(this.fixedTile);this.loadRole("tactile",this.fixedTile);
-        this.pathPatch.position.set(x,.1,z);
-      } else {
-        if(t.type==='dot') {shape("box",0xe9bc64,[.95,.1,.95],[0,.08,0],g);for(let j=0;j<9;j++)shape("sphere",0xd9a846,[.1,.07,.1],[(j%3-1)*.22,.16,(Math.floor(j/3)-1)*.22],g)}
-        else this.loadRole("tactile",g);
-        this.tactileTiles.push(g);
-      }
+        this.fixedTile=new THREE.Group();this.fixedTile.position.set(t.x,0,t.z);this.fixedTile.rotation.y=g.rotation.y;this.outdoor.add(this.fixedTile);this.loadRole("tactile",this.fixedTile);
+        this.pathPatch.position.set(t.x,.1,t.z);
+      }else{shape("box",0xe9bc64,[.95,.1,.95],[0,.08,0],g);for(let j=0;j<9;j++)shape("sphere",0xd9a846,[.1,.07,.1],[(j%3-1)*.22,.16,(Math.floor(j/3)-1)*.22],g)}
+      this.tactileTiles.push(g);
     });
+    this.tileBatch("tactile",lines);
   }
+
   updateDayNight(date=new Date()) {
     const d=dayPhase(date);this.dayState=d;
     const indoors=!!this.indoor;

@@ -504,7 +504,7 @@ function pathPuzzle() {
   let blocked = true,
     tiles = content.tactile.solution.map((t, i) => ({
       type: i === 1 ? "empty" : t.type,
-      rotation: i === 2 ? 90 : t.rotation,
+      rotation: i === 2 ? t.rotation+90 : t.rotation,
     }));
   const root = open(
     "모두를 위한 안내 길",
@@ -1522,12 +1522,18 @@ function legendReward(fresh) {
 function welcome() {
   const root = open(
     "금산마을에 오신 걸 환영해요",
-    `<div class="welcome-banner"><span class="eyebrow">OUR LITTLE VILLAGE, OUR BIG DISCOVERIES</span><h2 class="welcome-title">레벨 1부터 차례로!<br>우리 동네 수호대가 되자!</h2><p>학교 → 통학로 → 금호지 → 우리 반 생태 지도, <b>네 레벨을 순서대로</b> 도전해요. 스탬프 3개를 모으면 미션 성공!<br>우리 동네를 알고 돌보는 수호대가 될 수 있어요.</p><ol class="guardian-intro"><li><b>레벨 1 · 학교</b> — 9월 규칙 따라 쓰기, 내 약속과 이번 주 실천 체크</li><li><b>레벨 2 · 통학로</b> — 안내 길과 주택가 문제 해결 · 마을 스탬프</li><li><b>레벨 3 · 금호지</b> — 동물 친구의 전설 대화와 퀴즈 · 이야기 스탬프</li><li><b>레벨 4 · 우리 반 생태 지도</b> — 내 그림·이름·보호 약속 등록 · 생태 스탬프</li></ol></div><p class="small">진주시 금산면의 장소 이름을 빌려 수업 동선에 맞게 만든 <b>축약 지도</b>예요. 주민은 가상의 인물이며 실제 동물 서식의 증거가 아니에요. 학교 공간과 마을 안건은 수업용 구성이며, 학급 규칙은 선생님이 제공한 9월 회의 결과입니다.</p><p class="notice">처음에는 바로 뒤의 학교 문에서 <b>E키</b>를 눌러 들어가 보세요. 기록과 그림은 이 브라우저에만 저장돼요. 별도 계정·유료 API가 필요하지 않아요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`,
+    `<div class="welcome-banner"><span class="eyebrow">4-4반 마을 탐험 안내</span><h2 class="welcome-title">우리 동네 수호대가 되자!</h2><p>먼저 <b>세 가지 미션</b>을 차례로 해 봐요. 처음에는 학교에서 시작해요.</p><div class="mission-briefings">
+    <article class="mission-briefing"><span>미션 1 · 레벨 1</span><h3>우리 반 약속 익히기</h3><p>학교 칠판에서 9월 학급 회의 규칙을 읽고 한 줄씩 따라 써요. 이번 주에 지킬 약속과 실천 체크도 남겨요.</p></article>
+    <article class="mission-briefing"><span>미션 2 · 레벨 2</span><h3>학교에서 아파트까지 안전하게!</h3><p>끊어진 점자블록을 잇고 길을 막은 물건을 치워요. 주운 쓰레기는 가방에서 알맞게 분류해요.</p></article>
+    <article class="mission-briefing"><span>미션 3 · 레벨 3</span><h3>금호지의 두 용 이야기</h3><p>금호지 동화책을 끝까지 읽고 퀴즈에 도전해요. 동물 친구들의 이야기도 들어 봐요.</p></article></div>
+    <p class="briefing-finale"><b>마무리 · 레벨 4, 우리 반 생태 지도</b><br>세 미션 뒤에는 내 그림·생물 이름·보호 약속을 생태 지도에 등록해요. <b>마을·이야기·생태 스탬프 3개</b>를 모두 모으면 우리 동네 수호대 성공!</p></div>
+    <p class="small">진주시 금산면을 모티브로 한 수업용 축약 마을이에요. 동물 주민은 가상의 친구예요.<br>학급 규칙: ${h(content.classRules.source)}.</p><p class="notice">학교 문에서 <b>E키</b>로 들어가요. 이동은 WASD/방향키, 지도·가방은 ‘탐험 도구’에서 열어요. 기록은 이 브라우저에 저장돼요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`, "wide",
   );
   root.querySelector("#start").onclick = () => {
     state.welcomed = true;
     state.guardian.introSeen = true;
     state.journey.introSeen = true;
+    state.journey.introRevision = 2;
     persist();
     close();
   };
@@ -1665,7 +1671,7 @@ try {
     );
   }
   $("#loading").remove();
-  if (!state.welcomed || !state.journey.introSeen) welcome();
+  if (!state.welcomed || !state.journey.introSeen || state.journey.introRevision !== 2) welcome();
   setInterval(() => {
     drawMap($("#mini"));
     if (!world.indoor) {

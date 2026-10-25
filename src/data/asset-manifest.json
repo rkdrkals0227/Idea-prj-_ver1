@@ -1,46 +1,86 @@
 {
   "school": {
     "url": "models/uploaded/school.glb",
-    "position": [-10, 0, -5],
+    "position": [
+      -10,
+      0,
+      -5
+    ],
     "targetSize": 7,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [7, 5],
-    "footprint": [7, 5]
+    "collision": [
+      7,
+      5
+    ],
+    "footprint": [
+      7,
+      5
+    ]
   },
   "library": {
     "url": "models/uploaded/library.glb",
-    "position": [1, 0, -10],
+    "position": [
+      1,
+      0,
+      -10
+    ],
     "targetSize": 6,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [6, 5],
-    "footprint": [6, 5]
+    "collision": [
+      6,
+      5
+    ],
+    "footprint": [
+      6,
+      5
+    ]
   },
   "apartment": {
     "url": "models/uploaded/apartment.glb",
-    "position": [18, 0, -3.2],
+    "position": [
+      18,
+      0,
+      -3.5
+    ],
     "targetSize": 7,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [8, 7],
-    "footprint": [8, 7]
+    "collision": [
+      11,
+      9.5
+    ],
+    "footprint": [
+      11,
+      9.5
+    ]
   },
   "tree": {
     "url": "models/uploaded/tree.glb",
     "targetSize": 3.8,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [1, 1],
+    "collision": [
+      1,
+      1
+    ],
     "targetHeight": 3.8
   },
   "otter": {
     "url": "models/uploaded/otter-idle.glb",
-    "position": [-4, 0, 1],
+    "position": [
+      -4,
+      0,
+      1
+    ],
     "targetSize": 1.8,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [1, 1],
+    "collision": [
+      1,
+      1
+    ],
     "targetHeight": 1.8,
     "variants": {
       "idle": {
@@ -57,21 +97,40 @@
     },
     "patrol": {
       "points": [
-        [-4, 1],
-        [-1, 1],
-        [-1, 5],
-        [-4, 5]
+        [
+          -4,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          5
+        ],
+        [
+          -4,
+          5
+        ]
       ],
       "speed": 0.85
     }
   },
   "turtle": {
     "url": "models/uploaded/turtle-idle.glb",
-    "position": [19, 0, -11],
+    "position": [
+      19,
+      0,
+      -11
+    ],
     "targetSize": 1.5,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [1, 1],
+    "collision": [
+      1,
+      1
+    ],
     "targetHeight": 1.5,
     "variants": {
       "idle": {
@@ -88,21 +147,40 @@
     },
     "patrol": {
       "points": [
-        [19, -11],
-        [22, -11],
-        [22, -8],
-        [19, -8]
+        [
+          19,
+          -11
+        ],
+        [
+          22,
+          -11
+        ],
+        [
+          22,
+          -9.5
+        ],
+        [
+          19,
+          -9.5
+        ]
       ],
       "speed": 0.85
     }
   },
   "crane": {
     "url": "models/uploaded/crane-idle.glb",
-    "position": [4, 0, -6],
+    "position": [
+      4,
+      0,
+      -6
+    ],
     "targetSize": 2,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [1, 1],
+    "collision": [
+      1,
+      1
+    ],
     "targetHeight": 2.0,
     "variants": {
       "idle": {
@@ -119,21 +197,40 @@
     },
     "patrol": {
       "points": [
-        [4, -6],
-        [7, -6],
-        [7, -3],
-        [4, -3]
+        [
+          4,
+          -6
+        ],
+        [
+          7,
+          -6
+        ],
+        [
+          7,
+          -3
+        ],
+        [
+          4,
+          -3
+        ]
       ],
       "speed": 0.85
     }
   },
   "player": {
     "url": "models/uploaded/player-idle.glb",
-    "position": [-10, 0, 1],
+    "position": [
+      -10,
+      0,
+      1
+    ],
     "targetSize": 1.7,
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [0.7, 0.7],
+    "collision": [
+      0.7,
+      0.7
+    ],
     "targetHeight": 1.7,
     "variants": {
       "idle": {
@@ -162,7 +259,11 @@
     "targetSize": 2.8,
     "rotation": 0,
     "groundHeight": 0,
-    "fit": [2.7, 2.4, 0.55]
+    "fit": [
+      2.7,
+      2.4,
+      0.55
+    ]
   },
   "wastePaper": {
     "url": "models/uploaded/waste-paper.glb",
@@ -193,7 +294,11 @@
     "targetSize": 1,
     "rotation": 0,
     "groundHeight": -0.14,
-    "fit": [6, 0.13, 6],
+    "fit": [
+      6,
+      0.13,
+      6
+    ],
     "tile": true
   },
   "paving": {
@@ -201,7 +306,11 @@
     "targetSize": 1,
     "rotation": 0,
     "groundHeight": -0.015,
-    "fit": [2, 0.1, 2],
+    "fit": [
+      2,
+      0.1,
+      2
+    ],
     "tile": true
   },
   "tactile": {
@@ -209,7 +318,11 @@
     "targetSize": 1,
     "rotation": 0,
     "groundHeight": 0.02,
-    "fit": [0.85, 0.1, 0.85],
+    "fit": [
+      0.85,
+      0.1,
+      0.85
+    ],
     "tile": true
   },
   "tactileBroken": {
@@ -217,7 +330,11 @@
     "targetSize": 1,
     "rotation": 0,
     "groundHeight": 0.02,
-    "fit": [0.85, 0.1, 0.85],
+    "fit": [
+      0.85,
+      0.1,
+      0.85
+    ],
     "tile": true
   },
   "water": {
@@ -225,7 +342,11 @@
     "targetSize": 1,
     "rotation": 0,
     "groundHeight": 0.065,
-    "fit": [3, 0.08, 3],
+    "fit": [
+      3,
+      0.08,
+      3
+    ],
     "tile": true
   },
   "lotusWater": {
@@ -233,30 +354,76 @@
     "targetSize": 1,
     "rotation": 0,
     "groundHeight": 0.065,
-    "fit": [3, 0.15, 3],
+    "fit": [
+      3,
+      0.15,
+      3
+    ],
     "tile": true
   },
   "lake": {
     "url": "models/uploaded/lake.glb",
-    "position": [24, 0, -18],
-    "fit": [16, 0.85, 12],
-    "groundHeight": -0.12,
+    "position": [
+      24,
+      0,
+      -18
+    ],
+    "fit": [
+      16,
+      1.35,
+      12
+    ],
+    "groundHeight": 0.03,
     "rotation": 0,
-    "collision": [16, 12]
+    "collision": [
+      16,
+      12
+    ],
+    "castShadow": false,
+    "materialOverrides": {
+      "metalness": 0,
+      "roughness": 0.85,
+      "normalScale": 0.25
+    }
   },
   "fence": {
     "url": "models/uploaded/fence.glb",
-    "fit": [3, 1.1, 0.3],
+    "fit": [
+      3,
+      1.1,
+      0.3
+    ],
     "rotation": 0,
     "groundHeight": 0,
-    "collision": [3, 0.3],
+    "collision": [
+      3,
+      0.3
+    ],
     "placements": [
-      [-15, -9],
-      [-12, -9],
-      [-9, -9],
-      [17, 12],
-      [20, 12],
-      [23, 12]
+      [
+        -15,
+        -9
+      ],
+      [
+        -12,
+        -9
+      ],
+      [
+        -9,
+        -9
+      ],
+      [
+        17,
+        12
+      ],
+      [
+        20,
+        12
+      ],
+      [
+        23,
+        12
+      ]
     ]
   }
 }

@@ -49,5 +49,5 @@ test('only untouched old tactile defaults migrate; teacher tile edits survive ev
 test('route imports reject HTML dimension payloads, out of range and disconnected or wrong-facing cells',async()=>{
  const api=await import('../src/tactile.js');assert.equal(typeof api.validateTactile,'function');
  assert.doesNotThrow(()=>api.validateTactile(defaults.tactile));
- for(const patch of [{cols:'5" onpointerover="alert(1)'},{rows:999},{solution:defaults.tactile.solution.map((t,i)=>i===1?{...t,row:'1" onmouseover="alert(1)'}:t)},{solution:defaults.tactile.solution.map((t,i)=>i===5?{...t,rotation:0}:t)}])assert.throws(()=>api.validateTactile({...structuredClone(defaults.tactile),...patch}));
+ for(const patch of [{cols:'5" onpointerover="alert(1)'},{rows:999},{solution:defaults.tactile.solution.map((t,i)=>i===1?{...t,row:'1" onmouseover="alert(1)'}:t)},{solution:defaults.tactile.solution.map((t,i)=>i===1?{...t,rotation:0}:t)}])assert.throws(()=>api.validateTactile({...structuredClone(defaults.tactile),...patch}));
 });

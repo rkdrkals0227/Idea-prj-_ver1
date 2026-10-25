@@ -1,0 +1,12 @@
+# Three-mission briefing, continuous school road and lake repair
+
+User requests direct revision under standing design/publication delegation. Existing four saved levels and three stamps remain; introduction clearly explains missions1 rules,2 road,3 legend plus final ecology-map registration needed for third stamp. Refresh introduction revision once for old pupils.
+
+- Test rule normalization first: ignore leading Arabic/fullwidth/circled list numbers, whitespace and punctuation; keep every letter, reject missing/wrong words or extra executable text. Correct only default class attribution to September meeting by 4-4 pupils, preserving teacher custom source.
+- Briefing gets three large explicit mission cards and a separate final artwork/stamp instruction; existing quiet HUD remains.
+- Pure world-route generator uses school entrance -> road bend -> apartment entrance, max0.9m spacing; instantiate line blocks in one batch with rotations, mark corners/endpoints, retain one broken/fixed repair target and quest ID. Default editor L-route8x4/11cells matches school-apartment direction; migrate only untouched old U-default, preserve custom puzzles.
+- Enlarge apartment8x7 ->11x9.5 at[18,0,-3.5], preserve main road z3. Adjust turtle patrol behind apartment to keep all segments unblocked.
+- Root cause evidence: simplified lake6000triangles/8698vertices vs original99996/72009; blue-UV median surface in existing fit is worldY~0.017, close to terrain0.005 and lower parts intersect terrain. Restore original lake buffers, texture1024, fit16x1.35x12, bottom0.03, softer nonmetallic material/normal map, no duplicate water plane. Keep lake collider and click/story IDs.
+- Tests: unit normalization/attribution/migration/route continuity; browser opening3missions, numbered typing, full school-apartment road collision and patrol, original lake shape/water above ground, enlarged apartment, existing puzzle/book/art flow. Inspect close lake screenshot; build/static subpath; review then push main and gh-pages.
+
+Completed:40unit green;5 affected browser cases green across selected runs/retries. Review fixed meaningful-number stripping with RED→GREEN; actual screenshots caught lamp over tactile route, regression RED→GREEN after relocating lamp. New lake original72009 vertices allaboveground confirmed. Actual 3intro/road/lake/rule screenshots inspected. Build and static subpath HTTP200,25GLB200, E school, errors0. Existing IDs/progress preserved; publishing source and Pages under standing authorization.
