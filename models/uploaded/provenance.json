@@ -102,13 +102,6 @@
     ]
   },
   {
-    "id": "lake",
-    "sourceFile": "08_place_lake.glb",
-    "originalBytes": 4955948,
-    "webBytes": 433268,
-    "animations": []
-  },
-  {
     "id": "lamp",
     "sourceFile": "10_light.glb",
     "originalBytes": 3122280,
@@ -254,6 +247,15 @@
     "webBytes": 347108,
     "animations": [],
     "geometryPreserved": false,
+    "textureSize": 1024
+  },
+  {
+    "id": "lake",
+    "sourceFile": "08_place_lake.glb",
+    "originalBytes": 4955948,
+    "webBytes": 3872416,
+    "animations": [],
+    "geometryPreserved": true,
     "textureSize": 1024
   }
 ]
