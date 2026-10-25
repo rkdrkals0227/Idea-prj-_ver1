@@ -1,6 +1,8 @@
+import {showRoadLesson} from "./road-ui.js";
+import {villageReadyToSort} from "./road-lesson.js";
 import {MissionReminders,missionHint} from "./hints.js";
 import {validateTactile} from "./tactile.js";
-import { storyIllustration } from "./storybook.js";
+import { storyIllustration, mountStoryIllustration } from "./storybook.js";
 import { ActivityClock, formatDuration, dayPhase } from "./experience.js";
 import { validateClassRules, completeSchoolTyping } from "./classroom.js";
 import assetManifest from "./data/asset-manifest.json";
@@ -44,7 +46,6 @@ import {
   startQuest,
   collect,
   sortWaste,
-  pathValid,
   reconcile,
   approved,
   escapeHTML as h,
@@ -519,57 +520,12 @@ function pathPuzzle() {
     return;
   }
   if (!state.started.includes("path")) start("path");
-  let blocked = true,
-    tiles = content.tactile.solution.map((t, i) => ({
-      type: i === 1 ? "empty" : t.type,
-      rotation: i === 2 ? t.rotation+90 : t.rotation,
-    }));
-  const root = open(
-    "모두를 위한 안내 길",
-    `<p>${h(content.tactile.text)}</p><p class="notice">게임 속 주민과 함께하는 체험이에요. 실제 길은 어른과 담당 기관에 알려요.</p><button id="obstacle">상자 옮겨 통행로 비우기</button><p class="small">각 칸의 모양과 방향을 골라요. 모퉁이를 돌아 출발에서 도착까지 모두 이어 주세요. 가로 길은 가로 선형, 세로 길은 세로 선형이에요.<br>점형: ● · 선형: ━ · 세로 방향: ┃</p><div class="route-scroll"><div id="tiles" class="tiles ${content.tactile.layoutVersion===2?"route-grid":""}" style="--route-cols:${Number.isInteger(content.tactile.cols)?content.tactile.cols:5}"></div></div><button id="check" class="primary">경로가 이어졌는지 확인</button><div id="path-feedback" aria-live="polite"></div>`,
-  );
-  function draw() {
-    root.querySelector("#tiles").innerHTML = tiles
-      .map(
-        (t, i) =>
-          `<div class="tile" style="${Number.isInteger(content.tactile.solution[i].col)&&Number.isInteger(content.tactile.solution[i].row)?`grid-column:${content.tactile.solution[i].col+1};grid-row:${content.tactile.solution[i].row+1}`:""}"><span class="route-step">${i===0?"출발":i===tiles.length-1?"도착":`${i+1}번`}</span><span class="glyph">${t.type === "empty" ? "?" : t.type === "dot" ? "⠿" : t.rotation % 180 === 0 ? "☰" : "Ⅲ"}</span><label class="small">${i + 1}번 칸<select data-type="${i}"><option value="empty" ${t.type === "empty" ? "selected" : ""}>빈칸</option><option value="dot" ${t.type === "dot" ? "selected" : ""}>점형</option><option value="line" ${t.type === "line" ? "selected" : ""}>선형</option></select></label><button data-rotate="${i}" data-direction="${t.rotation%180}" style="font-size:.65rem;padding:5px">${t.rotation % 180 === 0 ? "가로 ↻" : "세로 ↻"}</button></div>`,
-      )
-      .join("");
-    root.querySelectorAll("[data-type]").forEach(
-      (s) =>
-        (s.onchange = () => {
-          tiles[+s.dataset.type].type = s.value;
-          draw();
-        }),
-    );
-    root.querySelectorAll("[data-rotate]").forEach(
-      (b) =>
-        (b.onclick = () => {
-          tiles[+b.dataset.rotate].rotation += 90;
-          draw();
-        }),
-    );
-  }
-  draw();
-  root.querySelector("#obstacle").onclick = (e) => {
-    blocked = false;
-    e.target.textContent = "✓ 통행로를 비웠어요";
-    e.target.disabled = true;
-  };
-  root.querySelector("#check").onclick = () => {
-    if (pathValid(tiles, content.tactile.solution, blocked)) {
-      state.path = true;
-      persist();
-      toast("안내 길이 이어졌어요! 물결의 감사 인사를 들어 보세요.");
-      close();
-    } else {
-      root.querySelector("#path-feedback").className = "feedback";
-      root.querySelector("#path-feedback").textContent = blocked
-        ? "먼저 길 위의 상자를 옮겨 주세요."
-        : "아직 끊긴 부분이나 다른 방향이 있어요. 칸의 모양과 방향을 다시 확인해 주세요.";
-    }
-  };
+  showRoadLesson({tactile:content.tactile,ui,
+    onComplete:()=>{if(state.path)return;state.path=true;persist();toast("점자블록을 고쳤어요! 길을 막지 않는 약속도 기억해요.");},
+    onExit:()=>{close();if(villageReadyToSort(state,content))bins({zone:"village",auto:true});}
+  });
 }
+
 function pickup(id) {
   const item = content.waste.find((w) => w.id === id);
   if (!item) return;
@@ -577,7 +533,9 @@ function pickup(id) {
   if (collect(state, id)) {
     startQuest(state, item.zone === "lake" ? "lake" : "trash");
     persist();
-    toast(`${item.name}을 가방에 담았어요. 가방에서 알맞게 분류해 주세요.`);
+    if(item.zone==='village'&&villageReadyToSort(state,content)){bins({zone:'village',auto:true});return;}
+    const required=content.waste.filter(w=>w.zone==='village'),count=required.filter(w=>state.collected.includes(w.id)||state.sorted.includes(w.id)).length;
+    toast(item.zone==='village'?`${item.name}을 담았어요! ${count}/${required.length}개 · 모두 모으면 분리배출 화면이 열려요.`:`${item.name}을 가방에 담았어요. 가방에서 알맞게 분류해 주세요.`);
   } else toast("이미 가방에 담거나 분류한 물건이에요.");
 }
 function bag() {
@@ -588,35 +546,30 @@ function bag() {
     "내 가방",
     `<button id="guardian-bag">우리 동네 수호대 스탬프 ${earnedGuardianStamps(state).length} / 3</button><h3 style="margin-top:20px">주운 쓰레기 ${items.length}개</h3>${items.length ? "<p>가방에서 재질에 맞게 분류해요.</p>" : "<p>지금은 가방이 비어 있어요. 길가의 쓰레기를 찾아볼까요?</p>"}<div class="cards">${items.map((i) => `<article class="card">${h(i.name)}</article>`).join("")}</div><button id="sort-from-bag" class="primary">가방 속 쓰레기 분류하기</button><h3 style="margin-top:24px">마음을 담은 활동 배지</h3>${state.badges.map((b) => `<span class="badge">✧ ${h(b)}</span>`).join("") || '<p class="small">함께 활동하면 배지가 생겨요.</p>'}<p class="small">이미 분류한 물건: ${state.sorted.length}개 · 접수한 편지: ${state.letters.length}개</p><button id="letters">편지 이어 쓰기</button>`,
   );
-  root.querySelector("#sort-from-bag").onclick = bins;
+  root.querySelector("#sort-from-bag").onclick = ()=>bins();
   root.querySelector("#letters").onclick = letter;
   root.querySelector("#guardian-bag").onclick = guardianOverview;
 }
-function bins() {
+function bins(options={}) {
   if (!levelGate(2)) return;
-  const items = state.collected
-      .map((id) => content.waste.find((w) => w.id === id))
-      .filter(Boolean),
-    categories = [...new Set(content.waste.map((w) => w.category))];
-  const root = open(
-    "가방 속 쓰레기를 분류해요",
-    `<p class="small">수업용 예시 기준이에요. 실제 배출 방법은 우리 지역 안내를 확인해요.</p>${items.length ? `<div class="cards">${items.map((i) => `<article class="card"><h3>${h(i.name)}</h3><div class="stack">${categories.map((c) => `<button data-sort="${h(i.id)}" data-category="${h(c)}">${h(c)}로 분류</button>`).join("")}</div><div class="result" aria-live="polite"></div></article>`).join("")}</div>` : "<p>가방이 비어 있어요. 먼저 쓰레기 가까이에서 E키로 주워 주세요.</p>"}`,
-  );
-  root.querySelectorAll("[data-sort]").forEach(
-    (b) =>
-      (b.onclick = () => {
-        const item = content.waste.find((w) => w.id === b.dataset.sort);
-        if (sortWaste(state, item, b.dataset.category)) {
-          persist();
-          toast(`${item.name}을 알맞게 분류했어요!`);
-          bins();
-        } else {
-          b.closest(".card").querySelector(".result").textContent =
-            `다시 살펴볼까요? ${item.name}의 재질은 ${item.category}이에요.`;
-        }
-      }),
-  );
+  const zone=options.zone||null,automatic=!!options.auto;
+  const items=state.collected.map(id=>content.waste.find(w=>w.id===id)).filter(w=>w&&(!zone||w.zone===zone));
+  const scope=zone?content.waste.filter(w=>w.zone===zone):content.waste;
+  const categories=[...new Set(scope.map(w=>w.category))];
+  const sorted=scope.filter(w=>state.sorted.includes(w.id)).length;
+  const complete=zone==='village'&&scope.length>0&&sorted===scope.length;
+  const root=open(complete?'분리배출을 마쳤어요!':'모은 쓰레기를 분리배출해요',`
+    ${automatic?`<section class="sorting-intro" data-auto-sorting="true"><h3>${scope.length}개를 모두 모았어요!</h3><p>각 물건에 맞는 수거함을 눌러요. 틀려도 다시 고를 수 있어요.</p><b>분리배출 ${sorted} / ${scope.length}</b></section>`:''}
+    ${complete?`<div id="sorting-success" class="sorting-success"><h3>✓ ${state.path?'레벨 2 클리어!':'분리배출 완료!'}</h3><p>${state.path?'마을이 깨끗해졌어요. 이제 금호지의 이야기를 만나러 가요.':'이제 학교 앞에서 점자블록도 고쳐 주세요.'}</p><button id="sorting-finish" class="primary">마을로 돌아가기</button></div>`:items.length?`<div class="cards sorting-cards">${items.map(i=>`<article class="card"><h3>${h(i.name)}</h3><p>어느 수거함에 넣을까요?</p><div class="stack">${categories.map(c=>`<button class="recycle-choice" data-sort="${h(i.id)}" data-category="${h(c)}"><span aria-hidden="true">♻</span>${h(c)}로 분류</button>`).join('')}</div><div class="result" aria-live="polite"></div></article>`).join('')}</div>`:'<p>가방이 비어 있어요. 먼저 쓰레기 가까이에서 E키로 주워 주세요.</p>'}
+    <p class="small">수업용 예시 기준이에요. 실제 배출 방법은 우리 지역 안내를 확인해요.</p>`,items.length>1?'wide':'');
+  root.querySelector('#sorting-finish')?.addEventListener('click',close);
+  root.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{
+    const item=content.waste.find(w=>w.id===b.dataset.sort);
+    if(sortWaste(state,item,b.dataset.category)){persist();toast(`${item.name}을 알맞게 분류했어요!`);bins(options)}
+    else b.closest('.card').querySelector('.result').textContent=`다시 살펴볼까요? ${item.name}의 재질은 ${item.category}이에요.`;
+  });
 }
+
 function lakeAction(id) {
   if (!levelGate(3)) return;
   startQuest(state, "lake");
@@ -1470,10 +1423,12 @@ function legendDialogue(index = null) {
   const root = open(
     lesson.title,
     `<span class="badge">전해지는 설화 · ${h(lesson.reviewStatus)}</span><p class="small">${h(lesson.notice)}</p>
-    <div class="storybook"><div class="story-art">${storyIllustration(current)}</div><div class="story-page"><p class="eyebrow">${current + 1} / ${lesson.pages.length} 장 · 금호지 이야기책</p><h3>${["금호지에 전해지는 이야기","두 용의 다툼","꼬리로 친 땅에 물이 고였어요","장군이 나섰어요","금호지를 지키는 청룡","우리도 마을을 아껴요"][current]||h(page.speaker)}</h3><p id="legend-text">${h(page.text)}</p></div></div>
+    <div class="storybook"><div class="story-art">${storyIllustration(current, page.id)}</div><div class="story-page"><p class="eyebrow">${current + 1} / ${lesson.pages.length} 장 · 금호지 이야기책</p><h3>${["금호지에 전해지는 이야기","두 용의 다툼","꼬리로 친 땅에 물이 고였어요","장군이 나섰어요","금호지를 지키는 청룡","우리도 마을을 아껴요"][current]||h(page.speaker)}</h3><p id="legend-text">${h(page.text)}</p></div></div>
     <p class="small">읽은 대화 ${lesson.pages.filter((p) => state.guardian.legendSeen.includes(p.id)).length} / ${lesson.pages.length}장 · 출처: ${h(lesson.sourceTitle)}</p>
     <div class="actions"><button id="legend-prev" ${current === 0 ? "disabled" : ""}>이전 이야기</button><button id="legend-next" class="primary">${current === lesson.pages.length - 1 ? "이야기 다 읽었어요 → 퀴즈 풀기" : "다음 이야기 →"}</button><button id="legend-quiz" ${read ? "" : "disabled"}>${read ? "전설 퀴즈 풀기" : "끝까지 읽으면 퀴즈가 열려요"}</button></div>`,
+    "wide",
   );
+  mountStoryIllustration(root);
   root.querySelector("#legend-prev").onclick = () =>
     legendDialogue(current - 1);
   root.querySelector("#legend-next").onclick = () => {

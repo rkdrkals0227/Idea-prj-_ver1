@@ -1121,3 +1121,31 @@ html[data-day-phase=dusk] .sun {background:#e5ad7d;}
 .mission-reminder button {align-self:flex-start;border:0;background:transparent;padding:2px 8px;color:#698369;font-size:1.4rem;}
 .copy-line input[readonly] {background:#edf0dc;color:#49694e;}
 @media(max-width:650px){.mission-reminder{bottom:228px;padding:12px 15px;width:calc(100vw - 24px);}.mission-reminder p{font-size:.8rem;}}
+.road-steps {display:flex;list-style:none;gap:8px;padding:0;margin:0 0 22px;}
+.road-steps li {flex:1;padding:11px 8px;border-radius:12px;background:#f1f1e4;color:#7c8a70;text-align:center;font-size:.8rem;}
+.road-steps li.active {background:#f6df9d;color:#63552c;font-weight:700;}.road-steps li.done{background:#e4edd7;color:#456b4b;}
+.road-question {font-size:1.25rem;line-height:1.6;}.road-demo-wrap{text-align:center;margin:18px 0;}.walking-arrow{font-weight:700;color:#527e68;font-size:1.05rem;}
+.road-demo{display:flex;justify-content:center;align-items:center;gap:12px;}.road-demo>span{display:flex;position:relative;width:88px;}.road-demo svg{width:88px;height:88px;}.road-target{outline:3px dashed #7e9a70;outline-offset:5px;border-radius:15px;}.road-target small{position:absolute;top:100%;width:145px;left:50%;transform:translateX(-50%);font-size:.68rem;margin-top:8px;color:#52735b;}
+.road-demo.vertical{flex-direction:column;gap:10px;}.road-demo.vertical>span,.road-demo.vertical svg{width:64px;height:64px;}.road-demo.vertical .road-target small{left:calc(100% + 14px);top:10px;transform:none;width:95px;text-align:left;}
+.road-empty{display:grid;place-items:center;width:88px;height:88px;background:#f2efdd;border-radius:15px;border:3px dashed #b6bd9c;font-size:2.5rem;color:#78936b;}
+.road-choices {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;max-width:550px;margin:34px auto 12px;}.road-choices button {display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px;border:2px solid #d9dfc5;border-radius:20px;background:#fffdf3;min-height:155px;}.road-choices button:hover,.road-choices button:focus-visible{border-color:#8eae77;background:#f4f8e9;}.road-choices svg{width:86px;height:86px;}.road-choices b{font-size:1rem;}
+.road-obstacle-picture {display:flex;align-items:center;justify-content:center;gap:10px;margin:25px 0;background:#eee4c9;padding:24px 10px;border-radius:18px;}.road-obstacle-picture svg{width:70px;height:70px;}.road-obstacle-picture>span{font-size:2.2rem;}.road-obstacle-picture .road-crate{padding:4px 13px;color:#9b704a;background:#d4a878;border-radius:7px;font-size:3.3rem;}
+.big-road-action {display:block;margin:18px auto;padding:16px 24px;font-size:1.05rem;}.road-feedback{min-height:1.8em;margin:14px 0;color:#7c6938;font-weight:700;text-align:center;}.road-note,.road-more{margin-top:18px;color:#7d8974;font-size:.72rem;}.road-success,.sorting-success{text-align:center;padding:24px;background:#edf4df;border-radius:20px;}.road-success>span{font-size:3rem;color:#70965e;}.road-success h3,.sorting-success h3{font-size:1.35rem;color:#406b50;}
+.sorting-intro {padding:18px 22px;background:#edf2dc;border-radius:17px;margin-bottom:22px;}.sorting-intro h3{margin-top:0;}.recycle-choice{display:flex;align-items:center;justify-content:center;gap:12px;min-height:55px;font-size:.95rem;}.recycle-choice span{font-size:1.4rem;}.sorting-cards .card{background:#fffdf4;}
+@media(max-width:650px){.road-steps li{font-size:.68rem;padding:9px 4px;}.road-choices{gap:10px;}.road-choices button{padding:13px 8px;}.road-question{font-size:1.05rem;}.road-obstacle-picture{gap:5px;}.road-obstacle-picture svg{width:48px;height:48px;}.road-obstacle-picture>span{font-size:1.5rem;}.road-choices b{font-size:.85rem;}}
+
+/* Local SIL OFL Korean lettering: book only, with system fallback. */
+@font-face {font-family:'Geumho Jua';src:url('/fonts/Jua-Regular.woff') format('woff');font-style:normal;font-weight:400;font-display:swap;}
+.storybook {position:relative;gap:26px;padding:24px;background:#fff9ed;align-items:center;}
+.story-art {min-width:0;width:100%;}
+.story-scene {position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:20px;background:#ecebd9;box-shadow:0 5px 18px #675d4218;}
+.story-fallback {position:absolute;inset:0;display:grid;align-items:center;}
+.story-atlas {position:absolute;width:300%;height:200%;max-width:none;opacity:0;}
+.modal img.story-atlas {max-width:none;}
+.story-atlas.ready {opacity:1;}
+.story-page h3,#legend-text {font-family:'Geumho Jua','Malgun Gothic',sans-serif;font-weight:400;}
+.story-page h3 {font-size:1.6rem;color:#355d50;margin:12px 0;}
+#legend-text {font-size:1.35rem;line-height:1.9;color:#514b40;letter-spacing:.015em;}
+.story-page .eyebrow {color:#8b713e;}
+@media(max-width:1000px){.storybook{gap:18px;}.story-art{max-width:390px;}.story-page h3{font-size:1.4rem;}#legend-text{font-size:1.2rem;}}
+@media(max-width:650px){.storybook{padding:14px;gap:12px;}.story-art{max-width:300px;}.story-page h3{font-size:1.25rem;}#legend-text{font-size:1.12rem;line-height:1.8;}}

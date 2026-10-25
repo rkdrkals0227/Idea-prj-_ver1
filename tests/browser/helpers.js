@@ -113,6 +113,7 @@ export async function publish(page, name = "우리 생태 친구") {
 }
 
 export async function sortBag(page) {
+  if(await page.locator("[data-sort],#sorting-success").count())return;
   await openTools(page);
   await page.locator('[data-page="bag"]').click();
   await page.locator("#sort-from-bag").click();
@@ -128,4 +129,11 @@ export async function openTools(page) {
 export async function copyRules(page) {
  const rules=await page.evaluate(async()=>{const m=await import('/src/main.js');return m.content.classRules.rules});
  for(const r of rules){const input=page.locator(`[data-rule-input="${r.id}"]`);if(await input.isEditable())await input.fill(r.text)}
+}
+export async function solveRoad(page) {
+ await page.locator('#obstacle').click();
+ await page.locator('[data-road-shape="line"]').click();
+ await page.locator('[data-road-direction="90"]').click();
+ await expect(page.locator('#road-success')).toContainText('수리 완료');
+ await page.locator('#road-finish').click();
 }

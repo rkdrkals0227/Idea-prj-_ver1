@@ -1,4 +1,4 @@
-import { openTools, copyRules } from "./helpers.js";
+import { openTools, copyRules, solveRoad } from "./helpers.js";
 import { test, expect } from "@playwright/test";
 async function app(page) {
   return page.evaluate(async () => {
@@ -162,21 +162,14 @@ test("all four levels play in sequence with typing, road solving, legend dialogu
   await expect(page.locator("#level-title")).toContainText("레벨 2");
   await page.locator("#school-next").click();
   await act(page, -6, 4.7, "활동하기");
-  await page.locator("#check").click();
-  await expect(page.locator("#path-feedback")).toContainText("상자");
-  await page.locator("#obstacle").click();
-  await page.locator('[data-type="1"]').selectOption("line");
-  await page.locator('[data-rotate="2"]').click();
-  await page.locator("#check").click();
+  await solveRoad(page);
   for (const [x, z] of [
     [10, 5],
     [13, 8],
     [16, 5],
   ])
     await act(page, x, z);
-  await openTools(page);
-  await page.locator('[data-page="bag"]').click();
-  await page.locator("#sort-from-bag").click();
+  await expect(page.locator("[data-auto-sorting]")).toBeVisible();
   for (const [id, category] of [
     ["can", "금속"],
     ["paper", "종이"],
