@@ -51,93 +51,93 @@
   },
   {
     "id": "lamp",
-    "sourceFile": "10_시설물_가로등.glb",
-    "originalBytes": 19501120,
-    "webBytes": 190484,
+    "sourceFile": "10_light.glb",
+    "originalBytes": 16480564,
+    "webBytes": 190260,
     "animations": []
   },
   {
     "id": "bench",
-    "sourceFile": "11_시설물_벤치.glb",
-    "originalBytes": 23303716,
-    "webBytes": 222588,
-    "animations": []
-  },
-  {
-    "id": "sign",
-    "sourceFile": "12_시설물_안내표지판.glb",
-    "originalBytes": 22802268,
-    "webBytes": 200556,
+    "sourceFile": "11_bench.glb",
+    "originalBytes": 20912580,
+    "webBytes": 222240,
     "animations": []
   },
   {
     "id": "tactile",
-    "sourceFile": "14_바닥_점자블록.glb",
-    "originalBytes": 16931624,
-    "webBytes": 209080,
+    "sourceFile": "13_Braille blocks.glb",
+    "originalBytes": 14805508,
+    "webBytes": 208684,
     "animations": []
   },
   {
     "id": "tactile-broken",
-    "sourceFile": "15_바닥_점자블록 깨진 거.glb",
-    "originalBytes": 20195732,
-    "webBytes": 216516,
+    "sourceFile": "15_Braille block_broken.glb",
+    "originalBytes": 17721492,
+    "webBytes": 216256,
     "animations": []
   },
   {
     "id": "paving",
-    "sourceFile": "16_바닥_보도블럭.glb",
-    "originalBytes": 14796504,
-    "webBytes": 99688,
-    "animations": []
-  },
-  {
-    "id": "waste-paper",
-    "sourceFile": "18_1_구겨진 종이 쓰레기.glb",
-    "originalBytes": 23507732,
-    "webBytes": 154744,
+    "sourceFile": "16_tile.glb",
+    "originalBytes": 12316272,
+    "webBytes": 99488,
     "animations": []
   },
   {
     "id": "grass",
-    "sourceFile": "17_바닥_잔디 타일.glb",
-    "originalBytes": 26031144,
-    "webBytes": 123816,
+    "sourceFile": "17_garden tile.glb",
+    "originalBytes": 23735008,
+    "webBytes": 123384,
+    "animations": []
+  },
+  {
+    "id": "waste-paper",
+    "sourceFile": "18_1_paper trash.glb",
+    "originalBytes": 19829404,
+    "webBytes": 154580,
     "animations": []
   },
   {
     "id": "waste-bottle",
-    "sourceFile": "18_2_버려진 물병.glb",
-    "originalBytes": 16933376,
-    "webBytes": 180016,
+    "sourceFile": "18_2_bottle.glb",
+    "originalBytes": 14800500,
+    "webBytes": 179712,
     "animations": []
   },
   {
     "id": "waste-can",
-    "sourceFile": "18_3_ 버려진 캔.glb",
-    "originalBytes": 24983392,
-    "webBytes": 246208,
+    "sourceFile": "18_3_ can.glb",
+    "originalBytes": 22453816,
+    "webBytes": 245200,
     "animations": []
   },
   {
     "id": "waste-wrapper",
-    "sourceFile": "18_4_ 버려진 과자 봉지.glb",
-    "originalBytes": 19647380,
-    "webBytes": 226096,
+    "sourceFile": "18_4_ trash.glb",
+    "originalBytes": 16744976,
+    "webBytes": 225684,
+    "animations": []
+  },
+  {
+    "id": "sign",
+    "sourceFile": "12_Information Sign.glb",
+    "originalBytes": 20304840,
+    "webBytes": 200308,
     "animations": []
   },
   {
     "id": "water",
-    "sourceFile": "20_바닥_물 타일.glb",
-    "originalBytes": 17670116,
-    "webBytes": 132888,
+    "sourceFile": "20_water tile.glb",
+    "originalBytes": 14779692,
+    "webBytes": 132160,
     "animations": []
   },
   {
     "id": "lotus-water",
-    "sourceFile": "19_바닥_연꽃 잎 있는 물 타일.glb",
-    "originalBytes": 26916504,
-    "webBytes": 166160,
+    "sourceFile": "19_water tile_with  flower.glb",
+    "originalBytes": 24070008,
+    "webBytes": 165396,
     "animations": []
   }
 ]
