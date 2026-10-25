@@ -5,7 +5,9 @@ import bpy, json, sys, pathlib, struct, io
 from PIL import Image
 jobs = json.loads(pathlib.Path(sys.argv[sys.argv.index('--') + 1]).read_text())
 out = pathlib.Path('public/models/uploaded'); out.mkdir(parents=True, exist_ok=True)
-report=[]
+existing = out/'provenance.json'
+replaced = {job['name'] for job in jobs}
+report = [entry for entry in json.loads(existing.read_text()) if entry['id'] not in replaced] if existing.exists() else []
 for job in jobs:
     src=pathlib.Path(job['path']); dest=out/(job['name']+'.glb')
     if not job['animated']:
