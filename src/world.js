@@ -212,6 +212,7 @@ export class World {
         if(ray.intersectObjects(this.libraryShelves||[],false).length){this.callbacks.interact('books');return}
       }
       if (hits[0]) this.callbacks.interact("art:" + hits[0].object.userData.artId);
+      else if(!this.indoor && ray.intersectObject(this.mailboxModel,true).length) this.callbacks.interact('mailbox');
       else if(!this.indoor && ray.intersectObject(this.lakeModel,true).length) this.callbacks.interact("lake-story");
     });
     this.animate();
@@ -443,9 +444,13 @@ export class World {
       this.loadRole(id, g);
     }
     this.entity("path", "활동하기", -6, 4.7);
-    this.entity("mailbox", "마을 우체통", 4, 8);
-    shape("box", 0xb86853, [0.9, 1, 0.8], [4, 1.2, 8], this.outdoor);
-    shape("cylinder", 0x826f57, [0.12, 1, 0.12], [4, 0.5, 8], this.outdoor);
+    const mailbox=manifest.mailbox;
+    this.mailboxModel=this.entity('mailbox','마을 우체통',mailbox.position[0],mailbox.position[2]);
+    const mailboxBase=shape('cylinder',0xe2d4b8,[1.6,.08,1.6],[0,.04,0],this.mailboxModel);mailboxBase.userData.keepOnModel=true;
+    shape('box',0xb86853,[.9,1,.8],[0,1.2,0],this.mailboxModel);
+    shape('cylinder',0x826f57,[.12,1,.12],[0,.5,0],this.mailboxModel);
+    this.block(mailbox.position[0],mailbox.position[2],...mailbox.collision);
+    this.loadRole('mailbox',this.mailboxModel);
     this.entity("forest", "월아산", -19, -11);
     this.entity("rest", "금호지", 18, -14);
     this.restTrash = shape(
@@ -519,7 +524,7 @@ export class World {
           this.modelStatus.set(key, "fallback");
           if (role === "idle") actor.setState("idle");
           this.callbacks.warning(
-            `${id} 모델(${role})을 읽지 못했어요. 임시 모형으로 계속할 수 있어요. 새로고침하거나 파일 경로·텍스처를 확인해 주세요.`,
+            `${cfg.label||id} 모델(${role})을 읽지 못했어요. 임시 모형으로 계속할 수 있어요. 새로고침하거나 파일 경로·텍스처를 확인해 주세요.`,
           );
         });
       this.modelLoads.push(task);

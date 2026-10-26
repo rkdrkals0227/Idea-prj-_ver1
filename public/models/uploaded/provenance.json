@@ -257,5 +257,14 @@
     "animations": [],
     "geometryPreserved": true,
     "textureSize": 1024
+  },
+  {
+    "id": "mailbox",
+    "sourceFile": "20_우체통.glb",
+    "originalBytes": 30909072,
+    "webBytes": 1713652,
+    "animations": [],
+    "geometryPreserved": false,
+    "textureSize": 1024
   }
 ]

@@ -425,5 +425,26 @@
         12
       ]
     ]
+  },
+  "mailbox": {
+    "url": "models/uploaded/mailbox.glb",
+    "label": "우체통",
+    "position": [
+      4,
+      0,
+      8
+    ],
+    "targetHeight": 2.25,
+    "rotation": 0,
+    "groundHeight": 0.08,
+    "collision": [
+      1.3,
+      1.4
+    ],
+    "materialOverrides": {
+      "metalness": 0.05,
+      "roughness": 0.85,
+      "normalScale": 0.35
+    }
   }
 }
