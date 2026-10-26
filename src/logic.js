@@ -20,6 +20,7 @@ export function initialState() {
     reflections: [],
     settings: {
       quality: "normal",
+      mapZoom: 1,
       motion: false,
       sound: false,
       font: 1,

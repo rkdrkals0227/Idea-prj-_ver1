@@ -1,3 +1,4 @@
+import {attachMapControls} from './map-controls.js';
 import {freshRun} from './play-session.js';
 import {showLibrary} from './library.js';
 import {showRoadIntro} from './road-intro.js';
@@ -109,9 +110,9 @@ function open(title, html, width = "") {
     }
     if (e.key === "Tab") {
       const els = [
-          ...modal.querySelectorAll("button,input,select,textarea,a[href],summary"),
+          ...modal.querySelectorAll("button,input,select,textarea,a[href],summary,[tabindex]"),
         ].filter((el) => {
-          if(el.disabled||el.hidden||!el.getClientRects().length)return false;
+          if(el.disabled||el.hidden||el.tabIndex<0||!el.getClientRects().length)return false;
           const closed=el.closest('details:not([open])');
           return !closed||closed.querySelector(':scope > summary')?.contains(el);
         }),
@@ -704,13 +705,16 @@ const places = [
   { id: "forest", name: "월아산", x: -19, z: -11 },
   { id: "mailbox", name: "우체통", x: 4, z: 8 },
 ];
-function drawMap(canvas, large = false) {
-  const ctx = canvas.getContext("2d"),
-    w = canvas.width,
-    hh = canvas.height;
-  ctx.clearRect(0, 0, w, hh);
+function mapPlayer(){
+ if(world?.indoor){const p=assetManifest[world.indoor].position;return{x:p[0],z:p[2]}}
+ return world?.player.position||{x:-10,z:1};
+}
+function drawMap(canvas, large = false, view=null) {
+  const ctx=canvas.getContext('2d'),w=large?820:canvas.width,hh=large?550:canvas.height;
+  ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();ctx.scale(canvas.width/w,canvas.height/hh);
   ctx.fillStyle = "#dce8c2";
   ctx.fillRect(0, 0, w, hh);
+  if(view){ctx.translate(w/2+view.panX,hh/2+view.panY);ctx.scale(view.zoom,view.zoom);ctx.translate(-w/2,-hh/2)}
   const x = (v) => ((v + 33) / 66) * w,
     z = (v) => ((v + 28) / 56) * hh;
   ctx.fillStyle = "#c7d6b0";
@@ -742,7 +746,7 @@ function drawMap(canvas, large = false) {
     ctx.fillRect(x(p.x) - 5, z(p.z) - 5, 10, 9);
     if (large) {
       ctx.fillStyle = "#48604a";
-      ctx.font = "15px sans-serif";
+      ctx.font = "18px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(p.name, x(p.x), z(p.z) + 22);
     }
@@ -753,7 +757,7 @@ function drawMap(canvas, large = false) {
     ctx.arc(x(e.x), z(e.z), large ? 6 : 3, 0, 7);
     ctx.fill();
     if (large) {
-      ctx.font = "13px sans-serif";
+      ctx.font = "15px sans-serif";
       ctx.fillText(
         { otter: "수달 친구", turtle: "남생이 친구", crane: "학 친구" }[e.id],
         x(e.x),
@@ -787,13 +791,14 @@ function drawMap(canvas, large = false) {
   const active =
     world?.activeObjective || objective(state, content, world?.indoor);
   if (active && !active.ui) {
+    const target=world?.indoor?mapPlayer():active;
     ctx.strokeStyle = "#d69b35";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(x(active.x), z(active.z), large ? 18 : 8, 0, 7);
+    ctx.arc(x(target.x), z(target.z), large ? 18 : 8, 0, 7);
     ctx.stroke();
   }
-  const p = world?.player.position || { x: -10, z: 1 };
+  const p = mapPlayer();
   ctx.fillStyle = "#355e4e";
   ctx.beginPath();
   ctx.arc(x(p.x), z(p.z), large ? 8 : 5, 0, 7);
@@ -805,6 +810,7 @@ function drawMap(canvas, large = false) {
     ctx.font = "bold 14px sans-serif";
     ctx.fillText(world?.indoor ? "나 (실내)" : "나", x(p.x), z(p.z) - 14);
   }
+  ctx.restore();
 }
 function hash(str) {
   let n = 0;
@@ -812,8 +818,8 @@ function hash(str) {
   return n;
 }
 function showMap(){
- const root=open('마을 지도',`<p class="small">금산면을 모티브로 수업 동선에 맞게 줄인 축약 지도예요. 빛나는 원은 지금 할 곳이에요.</p><canvas id="large-map" class="map-large" width="820" height="550" aria-label="나와 마을 시설의 위치"></canvas><div class="legend"><span>● 초록: 나</span><span>● 파랑: 동물 친구</span></div>${objective(state,content,world?.indoor)?.id==='bag'?'<button id="map-sort">가방에서 쓰레기 분류하기</button>':''}`,'wide');
- drawMap(root.querySelector('canvas'),true);root.querySelector('#map-sort')?.addEventListener('click',bag);
+ const root=open('마을 지도',`<p class="small">금산면을 모티브로 수업 동선에 맞게 줄인 축약 지도예요. 빛나는 원은 지금 할 곳이에요.</p><div class="map-toolbar" role="group" aria-label="지도 확대와 이동"><button id="map-zoom-out" aria-label="지도 축소">− 축소</button><output id="map-zoom-value" aria-live="polite">100%</output><button id="map-zoom-in" aria-label="지도 확대">+ 확대</button><button id="map-locate">내 위치</button><button id="map-reset">전체 지도</button></div><p id="map-help" class="small">버튼이나 마우스 휠로 확대·축소해요. 확대한 지도는 끌어서 이동해요. 지도에 초점을 두면 방향키로 이동하고 + / − / 0 키로 크기를 바꿀 수 있어요.</p><canvas id="large-map" class="map-large" width="1640" height="1100" tabindex="0" aria-label="나와 마을 시설의 위치를 보여 주는 지도" aria-describedby="map-help"></canvas><div class="legend"><span>● 초록: 나</span><span>● 파랑: 동물 친구</span></div>${objective(state,content,world?.indoor)?.id==='bag'?'<button id="map-sort">가방에서 쓰레기 분류하기</button>':''}`,'wide');
+ attachMapControls({root,zoom:state.settings.mapZoom,draw:(canvas,view)=>drawMap(canvas,true,view),player:mapPlayer,onZoom:zoom=>{state.settings.mapZoom=zoom;persist()}});root.querySelector('#map-sort')?.addEventListener('click',bag);
 }
 async function refreshWorks(){
  works=await artStore.all();reconcileExhibits(state,works);persist();await world?.setArt([],state.settings);
@@ -1151,6 +1157,7 @@ function validateState(s) {
     !s.lake ||
     typeof s.lake !== "object" ||
     !s.settings ||
+    (s.settings.mapZoom!==undefined&&(!Number.isFinite(s.settings.mapZoom)||s.settings.mapZoom<1||s.settings.mapZoom>3)) ||
     ![5, 15, 30].includes(+s.settings.artLimit) ||
     ![1, 1.15, 1.3].includes(+s.settings.font)
   )
