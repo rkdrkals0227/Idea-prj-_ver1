@@ -1,3 +1,4 @@
+import {VillageAudio} from './audio.js';
 import {attachMapControls} from './map-controls.js';
 import {freshRun} from './play-session.js';
 import {showLibrary} from './library.js';
@@ -130,7 +131,10 @@ function open(title, html, width = "") {
   modal.querySelector(".close").focus();
   return modal.querySelector(".modal-body");
 }
-const ui = { open, close, toast };
+const sound=new VillageAudio({baseUrl:import.meta.env.BASE_URL,report:message=>toast(message),changed:status=>{const el=document.querySelector('#audio-status');if(el)el.textContent=status}});
+const ui = { open, close, toast, sound:kind=>sound.play(kind) };
+document.addEventListener('visibilitychange',()=>sound.visibility());
+document.addEventListener('pointerdown',()=>{if(state?.welcomed&&state.settings.sound&&sound.context&&sound.context.state!=='running')sound.unlock()});
 setStorageReporter((message) => toast(message, true));
 state = freshRun(loadState());
 content = upgradeQuizContent(loadContent(defaults));
@@ -437,6 +441,7 @@ function quiz(context, requestedId = null) {
       (b.onclick = () => {
         const correct = +b.dataset.answer === q.answer,
           a = root.querySelector("#answer");
+        sound.play(correct?"correct":"wrong");
         a.className = "feedback";
         a.textContent = correct
           ? `✓ 맞았어요! ${q.explanation}`
@@ -560,8 +565,8 @@ function bins(options={}) {
   root.querySelector('#sorting-finish')?.addEventListener('click',close);
   root.querySelectorAll('[data-sort]').forEach(b=>b.onclick=()=>{
     const item=content.waste.find(w=>w.id===b.dataset.sort);
-    if(sortWaste(state,item,b.dataset.category)){persist();toast(`${item.name}을 알맞게 분류했어요!`);bins(options)}
-    else b.closest('.card').querySelector('.result').textContent=`다시 살펴볼까요? ${item.name}의 재질은 ${item.category}이에요.`;
+    if(sortWaste(state,item,b.dataset.category)){sound.play("correct");persist();toast(`${item.name}을 알맞게 분류했어요!`);bins(options)}
+    else {sound.play("wrong");b.closest('.card').querySelector('.result').textContent=`다시 살펴볼까요? ${item.name}의 재질은 ${item.category}이에요.`;}
   });
 }
 
@@ -1072,14 +1077,21 @@ function settings() {
   const s = state.settings;
   const root = open(
     "나에게 맞는 탐험",
-    `<form id="settings"><label>화질<select name="quality"><option value="normal" ${s.quality === "normal" ? "selected" : ""}>보통</option><option value="low" ${s.quality === "low" ? "selected" : ""}>낮음 · 그림자 줄이기</option></select></label><label>글자 크기<select name="font"><option value="1" ${+s.font === 1 ? "selected" : ""}>기본</option><option value="1.15" ${+s.font === 1.15 ? "selected" : ""}>크게</option><option value="1.3" ${+s.font === 1.3 ? "selected" : ""}>더 크게</option></select></label><input type="hidden" name="artLimit" value="${s.artLimit}"><input type="hidden" name="displayName" value="${s.displayName}"><label class="check"><input name="motion" type="checkbox" ${s.motion ? "checked" : ""}>움직임·흔들림 줄이기</label><label class="check"><input name="sound" type="checkbox" ${s.sound ? "checked" : ""}>직접 만든 짧은 배경 선율 켜기</label><button class="primary">설정 적용</button></form><hr><p class="small">개인 체험판 · 새로고침하면 미션·스탬프·학생 입력 기록·활동 시간을 처음부터 시작해요. 화질·글자 설정과 교사 자료는 유지해요. 다른 기기에는 자동 공유되지 않아요. 공개 기기에서 사용을 마치면 자료를 보관한 뒤 브라우저 사이트 데이터를 지워 주세요.</p><div class="actions"><button id="backup">개인 기록 백업</button><button id="restore">개인 기록 복원</button><button id="teacher">교사용 수업 편집</button><button id="welcome">시작 안내 다시 보기</button></div>`,
+    `<form id="settings"><label>화질<select name="quality"><option value="normal" ${s.quality === "normal" ? "selected" : ""}>보통</option><option value="low" ${s.quality === "low" ? "selected" : ""}>낮음 · 그림자 줄이기</option></select></label><label>글자 크기<select name="font"><option value="1" ${+s.font === 1 ? "selected" : ""}>기본</option><option value="1.15" ${+s.font === 1.15 ? "selected" : ""}>크게</option><option value="1.3" ${+s.font === 1.3 ? "selected" : ""}>더 크게</option></select></label><input type="hidden" name="artLimit" value="${s.artLimit}"><input type="hidden" name="displayName" value="${s.displayName}"><label class="check"><input name="motion" type="checkbox" ${s.motion ? "checked" : ""}>움직임·흔들림 줄이기</label><fieldset class="audio-settings"><legend>마을의 음악과 소리</legend><label class="check"><input name="sound" type="checkbox" ${s.sound ? "checked" : ""}>배경음악과 효과음 켜기</label><label>배경음악 <output id="music-volume-label">${Math.round(s.musicVolume*100)}%</output><input name="musicVolume" aria-label="배경음악 볼륨" type="range" min="0" max="100" step="5" value="${Math.round(s.musicVolume*100)}"></label><label>효과음 <output id="effects-volume-label">${Math.round(s.effectsVolume*100)}%</output><input name="effectsVolume" aria-label="효과음 볼륨" type="range" min="0" max="100" step="5" value="${Math.round(s.effectsVolume*100)}"></label><p id="audio-status" class="small" role="status">${h(sound.status)}</p><button id="audio-retry" type="button">소리 다시 켜기</button><p class="small">소리 설정은 바로 적용되고 저장돼요. 첫 탐험 시작 클릭 후 재생돼요. 다른 탭을 보는 동안은 잠시 쉬어요.</p></fieldset><button class="primary">설정 적용</button></form><hr><p class="small">개인 체험판 · 새로고침하면 미션·스탬프·학생 입력 기록·활동 시간을 처음부터 시작해요. 화질·글자 설정과 교사 자료는 유지해요. 다른 기기에는 자동 공유되지 않아요. 공개 기기에서 사용을 마치면 자료를 보관한 뒤 브라우저 사이트 데이터를 지워 주세요.</p><div class="actions"><button id="backup">개인 기록 백업</button><button id="restore">개인 기록 복원</button><button id="teacher">교사용 수업 편집</button><button id="welcome">시작 안내 다시 보기</button></div>`,
   );
+  for(const [name,label] of [['musicVolume','music-volume-label'],['effectsVolume','effects-volume-label']]){
+   root.querySelector(`[name="${name}"]`).oninput=e=>{state.settings[name]=Number(e.target.value)/100;root.querySelector(`#${label}`).textContent=`${e.target.value}%`;sound.configure(state.settings);saveState(state)};
+  }
+  root.querySelector('[name="sound"]').onchange=e=>{state.settings.sound=e.target.checked;sound.configure(state.settings);if(e.target.checked)sound.unlock();saveState(state)};
+  root.querySelector('#audio-retry').onclick=()=>{state.settings.sound=true;root.querySelector('[name="sound"]').checked=true;sound.configure(state.settings);sound.unlock();saveState(state)};
   root.querySelector("form").onsubmit = async (e) => {
     e.preventDefault();
     const d = new FormData(e.target);
     state.settings = {
       ...state.settings,
       ...Object.fromEntries(d),
+      musicVolume: Number(d.get("musicVolume"))/100,
+      effectsVolume: Number(d.get("effectsVolume"))/100,
       font: +d.get("font"),
       artLimit: +d.get("artLimit"),
       motion: d.has("motion"),
@@ -1172,6 +1184,8 @@ function validateState(s) {
     !s.lake ||
     typeof s.lake !== "object" ||
     !s.settings ||
+    ['musicVolume','effectsVolume'].some(key=>s.settings[key]!==undefined&&(!Number.isFinite(s.settings[key])||s.settings[key]<0||s.settings[key]>1)) ||
+    (s.settings.sound!==undefined&&typeof s.settings.sound!=='boolean') ||
     (s.settings.cameraZoom!==undefined&&(!Number.isFinite(s.settings.cameraZoom)||s.settings.cameraZoom<0.75||s.settings.cameraZoom>1.75)) ||
     (s.settings.mapZoom!==undefined&&(!Number.isFinite(s.settings.mapZoom)||s.settings.mapZoom<1||s.settings.mapZoom>3)) ||
     ![5, 15, 30].includes(+s.settings.artLimit) ||
@@ -1179,9 +1193,6 @@ function validateState(s) {
   )
     throw new Error("편지·소감·설정 형식을 확인해 주세요.");
 }
-let audio = null,
-  audioTimer = null,
-  note = 0;
 function applySettings() {
   document.documentElement.classList.toggle(
     "reduce-motion",
@@ -1190,49 +1201,27 @@ function applySettings() {
   document.documentElement.style.fontSize = `${16 * state.settings.font}px`;
   world?.configure(state.settings);
   renderCameraZoom();
-  clearInterval(audioTimer);
-  audioTimer = null;
-  if (!state.settings.sound) {
-    audio?.suspend();
-    return;
-  }
-  try {
-    audio ??= new AudioContext();
-    audio.resume();
-    audioTimer = setInterval(() => {
-      if (document.hidden || !state.settings.sound) return;
-      const osc = audio.createOscillator(),
-        gain = audio.createGain(),
-        now = audio.currentTime;
-      osc.type = "sine";
-      osc.frequency.value = [
-        261.63, 329.63, 392, 440, 392, 329.63, 293.66, 329.63,
-      ][note++ % 8];
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.028, now + 0.06);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-      osc.connect(gain);
-      gain.connect(audio.destination);
-      osc.start(now);
-      osc.stop(now + 1.3);
-    }, 900);
-  } catch {
-    toast("이 기기에서는 소리를 재생하지 못했어요. 무음으로 탐험할 수 있어요.");
-  }
+  sound.configure(state.settings);
 }
+
 function guardianOverview(){
  if(isGuardian(state))return showEnding();
  const current=journeyLevel(state),earned=earnedGuardianStamps(state).map(s=>s.id);
  const root=open('세 가지 미션 · 우리 동네 수호대',`<div class="guardian-summary"><h3>지금은 레벨 ${current}이에요. 빛나는 곳부터 시작해요.</h3><p>약속 · 마을 · 이야기 스탬프 ${earned.length} / 3</p></div><div class="cards">${levels.map(l=>`<article class="card"><span class="badge">레벨 ${l.id} · ${l.id<current?'✓ 완료':l.id===current?'지금 도전':'잠김'}</span><h3>${h(l.title)}</h3><p>${h(l.description)}</p><button data-stage="${l.id}">활동 확인하기</button></article>`).join('')}</div><p class="small">도서관 책 다섯 권은 미션과 관계없이 언제든 자유롭게 읽어요.</p>`,'wide');
  root.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>levelAction(+b.dataset.stage));
 }
-function showEnding(){
- const root=open('우리 동네 수호대 · 미션 성공!',`<div class="ending-card"><span class="ending-medal" aria-hidden="true">✦</span><p class="eyebrow">세 가지 미션 모두 완료!</p><h3>정말 잘했어요!<br>우리 동네 수호대가 되었어요.</h3><p>우리 반의 약속을 익히고, 안전한 길을 만들고,<br>금호지의 이야기도 배웠어요.</p><p>${h(content.guardianLegend.quiz.explanation)}</p><div class="stamp-strip">${guardianStamps.map(s=>`<span class="badge">✓ ${h(s.name)}</span>`).join('')}</div><p>생활에서도 약속을 지키고 우리 동네를 아껴 주세요!</p><button id="finish-game" class="primary">오늘 탐험 마치기</button><button id="restart-game">처음부터 다시 하기</button><div class="actions"><button id="ending-library">도서관 책 더 읽기</button><button id="ending-walk">마을 더 둘러보기</button></div></div>`,'wide');
+let celebrated=false;
+function celebrationArt(){return `<div class="celebration-art" aria-hidden="true">${['#de9560','#659d88','#cba94b'].map((c,j)=>`<span class="firework" style="--firework-color:${c};--burst:${j}">${Array.from({length:12},(_,i)=>`<i style="--ray:${i}"></i>`).join('')}</span>`).join('')}<span class="celebration-caption">✦ 축하해요! ✦</span></div>`}
+function showEnding(earned=false){
+ const celebrate=earned&&!celebrated;
+ if(celebrate){celebrated=true;sound.play('celebrate')}
+
+ const root=open('우리 동네 수호대 · 미션 성공!',`<div class="ending-card">${celebrationArt()}<span class="ending-medal" aria-hidden="true">✦</span><p class="eyebrow">세 가지 미션 모두 완료!</p><h3>정말 잘했어요!<br>우리 동네 수호대가 되었어요.</h3><p>우리 반의 약속을 익히고, 안전한 길을 만들고,<br>금호지의 이야기도 배웠어요.</p><p>${h(content.guardianLegend.quiz.explanation)}</p><div class="stamp-strip">${guardianStamps.map(s=>`<span class="badge">✓ ${h(s.name)}</span>`).join('')}</div><p>생활에서도 약속을 지키고 우리 동네를 아껴 주세요!</p><button id="finish-game" class="primary">오늘 탐험 마치기</button><button id="restart-game">처음부터 다시 하기</button><div class="actions"><button id="ending-library">도서관 책 더 읽기</button><button id="ending-walk">마을 더 둘러보기</button></div></div>`,'wide');
  root.querySelector('#restart-game').onclick=()=>location.reload();root.querySelector('#finish-game').onclick=finishGame;root.querySelector('#ending-library').onclick=()=>books();root.querySelector('#ending-walk').onclick=close;
 }
 function finishGame(){
  state.journey.sessionEnded=true;persist();updateActivity();
- const root=open('오늘 탐험 끝! 정말 잘했어요',`<div class="ending-card"><span class="ending-medal" aria-hidden="true">✦</span><h3>수고했어요, 우리 동네 수호대!</h3><p>세 미션을 모두 마쳤어요!<br>이제 이 창을 닫고 쉬어도 좋아요. 다시 도전하려면 아래 버튼을 눌러요.</p><p class="small">탐험을 마친 동안에는 활동 시간이 늘어나지 않아요.</p><div class="actions"><button id="restart-game" class="primary">처음부터 다시 하기</button><button id="resume-explore">이 마을 더 둘러보기</button></div></div>`,'wide');
+ const root=open('오늘 탐험 끝! 정말 잘했어요',`<div class="ending-card">${celebrationArt()}<span class="ending-medal" aria-hidden="true">✦</span><h3>수고했어요, 우리 동네 수호대!</h3><p>세 미션을 모두 마쳤어요!<br>이제 이 창을 닫고 쉬어도 좋아요. 다시 도전하려면 아래 버튼을 눌러요.</p><p class="small">탐험을 마친 동안에는 활동 시간이 늘어나지 않아요.</p><div class="actions"><button id="restart-game" class="primary">처음부터 다시 하기</button><button id="resume-explore">이 마을 더 둘러보기</button></div></div>`,'wide');
  modal.querySelector('.close').hidden=true;root.querySelector('#restart-game').onclick=()=>location.reload();root.querySelector('#resume-explore').onclick=()=>{state.journey.sessionEnded=false;persist();close();updateActivity()};root.querySelector('#resume-explore').focus();
 }
 function openLakeBook(){
@@ -1268,14 +1257,13 @@ function legendDialogue(index = null) {
     "wide",
   );
   mountStoryIllustration(root);
-  root.querySelector("#legend-prev").onclick = () =>
-    legendDialogue(current - 1);
+  root.querySelector("#legend-prev").onclick = () =>{sound.play("page");legendDialogue(current - 1)};
   root.querySelector("#legend-next").onclick = () => {
     if (!readLegendPage(state, lesson, page.id)) {
       toast("앞의 이야기부터 차례로 읽어 주세요.");
       return;
     }
-    persist();
+    sound.play("page");persist();
     if (current === lesson.pages.length - 1) legendQuiz();
     else legendDialogue(current + 1);
   };
@@ -1307,6 +1295,7 @@ function legendQuiz() {
       (b.onclick = () => {
         const result = answerLegend(state, lesson, +b.dataset.legendAnswer);
         if (result === "wrong") {
+          sound.play("wrong");
           const el = root.querySelector("#legend-feedback");
           el.className = "feedback";
           el.textContent =
@@ -1317,12 +1306,13 @@ function legendQuiz() {
           legendDialogue();
           return;
         }
+        if(result==='earned')sound.play("correct");
         persist();
         legendReward(result === "earned");
       }),
   );
 }
-function legendReward(){showEnding()}
+function legendReward(earned=false){showEnding(earned)}
 function welcome() {
   const root = open(
     "금산마을에 오신 걸 환영해요",
@@ -1331,9 +1321,10 @@ function welcome() {
     <article class="mission-briefing"><span>미션 2 · 레벨 2</span><h3>학교에서 아파트까지 안전하게!</h3><p>끊어진 점자블록을 잇고 길을 막은 물건을 치워요. 점자블록 설명을 먼저 읽어요. 쓰레기 세 개를 모으면 분리배출 화면이 바로 열려요.</p></article>
     <article class="mission-briefing"><span>미션 3 · 레벨 3</span><h3>금호지의 두 용 이야기</h3><p>금호지 동화책을 끝까지 읽고 퀴즈에 도전해요. 동물 친구들의 이야기도 들어 봐요.</p></article></div>
     <p class="briefing-finale"><b>세 미션을 모두 마치면 탐험 끝!</b><br>약속·마을·이야기 스탬프 세 개를 모으면 칭찬 화면이 나와요. ‘오늘 탐험 마치기’를 눌러 마무리해요. 도서관의 진주 이야기 다섯 권은 언제든 자유롭게 읽을 수 있어요.</p></div>
-    <p class="small">진주시 금산면을 모티브로 한 수업용 축약 마을이에요. 동물 주민은 가상의 친구예요.<br>학급 규칙: ${h(content.classRules.source)}.</p><p class="notice">학교 문에서 <b>E키</b>로 들어가요. 이동은 WASD/방향키, 지도·가방은 ‘탐험 도구’에서 열어요. 새로고침하거나 ‘처음부터 다시 하기’를 누르면 미션과 활동 시간을 처음부터 시작해요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`, "wide",
+    <p class="small">진주시 금산면을 모티브로 한 수업용 축약 마을이에요. 동물 주민은 가상의 친구예요.<br>학급 규칙: ${h(content.classRules.source)}.</p><p class="notice">학교 문에서 <b>E키</b>로 들어가요. 이동은 WASD/방향키, 지도·가방은 ‘탐험 도구’에서 열어요. 새로고침하거나 ‘처음부터 다시 하기’를 누르면 미션과 활동 시간을 처음부터 시작해요.</p><label class="check"><input id="start-sound" type="checkbox" ${state.settings.sound?'checked':''}>배경음악·효과음과 함께 탐험하기</label><p class="small">음악과 효과음 크기는 ‘탐험 도구 → 설정’에서 바꿀 수 있어요.</p><button id="start" class="primary" style="width:100%">탐험을 시작할까요? →</button>`, "wide",
   );
   root.querySelector("#start").onclick = () => {
+    state.settings.sound=root.querySelector('#start-sound').checked;sound.configure(state.settings);sound.unlock();
     state.welcomed = true;
     state.guardian.introSeen = true;
     state.journey.introSeen = true;
@@ -1418,6 +1409,7 @@ document.querySelectorAll("[data-key]").forEach((b) => {
 try {
   world = new World($("#world"), {
     interact,
+    walk:()=>sound.play("step"),
     near: (e) => {
       const b = $("#interact");
       b.hidden = !e;
@@ -1495,4 +1487,4 @@ try {
   r.querySelector("#retry").onclick = () => location.reload();
   console.error(e);
 }
-export { world, state, content, works, validateContent, persist };
+export { world, state, content, works, validateContent, persist, sound };

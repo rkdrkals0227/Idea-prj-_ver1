@@ -60,8 +60,8 @@ function label(text, color = "#315747") {
   return s;
 }
 export class World {
-  constructor(host, { interact, near, warning, state, content }) {
-    this.callbacks = { interact, near, warning };
+  constructor(host, { interact, near, warning, walk, state, content }) {
+    this.callbacks = { interact, near, warning, walk };
     this.host = host;
     this.state = state;
     this.content = content;
@@ -964,6 +964,7 @@ export class World {
         (this.keys.has("w") || this.keys.has("arrowup") ? 1 : 0);
     }
     const length = Math.hypot(dx, dz);
+    const beforeX=this.player.position.x,beforeZ=this.player.position.z;
     if (length) {
       dx /= length;
       dz /= length;
@@ -973,6 +974,8 @@ export class World {
       if (!this.blocked(this.player.position.x, z)) this.player.position.z = z;
       this.player.rotation.y = Math.atan2(dx, dz);
     }
+    const moving=this.moveEnabled&&(Math.abs(this.player.position.x-beforeX)+Math.abs(this.player.position.z-beforeZ)>.0001);
+    if(moving&&t-(this.lastFootstep??-1)>.34){this.lastFootstep=t;this.callbacks.walk?.()}
     const reduced = this.settings?.motion;
     this.player.position.y = length && !reduced ? Math.sin(t * 14) * 0.06 : 0;
     this.models.player?.setState(length ? "walk" : "idle");

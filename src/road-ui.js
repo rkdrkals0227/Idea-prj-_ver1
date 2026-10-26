@@ -35,8 +35,9 @@ export function showRoadLesson({tactile,ui,onComplete,onExit}){
  }
  function choose(action,value){
   if(!chooseRoadStep(lesson,action,value)){
-   root.querySelector('#path-feedback').textContent=lesson.stage===1?'다시 살펴볼까요? 양옆과 같은 무늬를 골라요.':'화살표와 줄무늬가 같은 방향인지 비교해 보세요.';return;
+   ui.sound?.('wrong');root.querySelector('#path-feedback').textContent=lesson.stage===1?'다시 살펴볼까요? 양옆과 같은 무늬를 골라요.':'화살표와 줄무늬가 같은 방향인지 비교해 보세요.';return;
   }
+  if(action!=='clear')ui.sound?.('correct');
   if(roadLessonComplete(lesson)&&!awarded){awarded=true;onComplete()}
   draw();
   root.querySelector('[data-road-shape],[data-road-direction],#road-finish')?.focus();
