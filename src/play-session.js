@@ -5,6 +5,7 @@ export function freshRun(previous){
  const next=initialState(),s=previous?.settings||{},defaults=next.settings;
  next.settings={
   mapZoom:normaliseMapZoom(s.mapZoom),
+  cameraZoom:Number.isFinite(s.cameraZoom)&&s.cameraZoom>=0.75&&s.cameraZoom<=1.75?s.cameraZoom:1,
   quality:['normal','low'].includes(s.quality)?s.quality:defaults.quality,
   font:[1,1.15,1.3].includes(Number(s.font))?Number(s.font):defaults.font,
   motion:s.motion===true,sound:s.sound===true,

@@ -984,6 +984,11 @@ export class World {
     const p = this.player.position;
     const target = new THREE.Vector3(p.x + 13, p.y + 21, p.z + 23);
     this.camera.position.lerp(target, 1 - Math.exp(-dt * 5));
+    const desiredZoom=this.settings?.cameraZoom??1;
+    if(Math.abs(this.camera.zoom-desiredZoom)>0.0001){
+      this.camera.zoom=reduced?desiredZoom:THREE.MathUtils.lerp(this.camera.zoom,desiredZoom,1-Math.exp(-animationDt*8));
+      this.camera.updateProjectionMatrix();
+    }
     this.camera.lookAt(p.x, p.y, p.z - 1);
     this.updateNearby();
     this.updateObjective(t);

@@ -21,6 +21,7 @@ export function initialState() {
     settings: {
       quality: "normal",
       mapZoom: 1,
+      cameraZoom: 1,
       motion: false,
       sound: false,
       font: 1,

@@ -1,0 +1,13 @@
+import{test,expect}from'@playwright/test';
+import{start,act,close,openTools}from'./helpers.js';
+const inspect=page=>page.evaluate(async()=>{const m=await import([...document.scripts].find(s=>s.src.includes('/src/main.js')).src);return {zoom:m.world.camera.zoom,position:m.world.player.position.toArray(),level:m.state.journey.schoolReady,mapZoom:m.state.settings.mapZoom}});
+test('main screen camera buttons zoom indoors and outdoors independently of the map and preserve preference',async({page})=>{
+ test.setTimeout(90000);await start(page);const output=page.locator('#camera-zoom-value');await expect(output).toHaveText('100%');const before=await inspect(page);
+ await page.locator('#camera-zoom-in').click();await expect(output).toHaveText('125%');await expect.poll(async()=>(await inspect(page)).zoom).toBeGreaterThan(1.24);expect((await inspect(page)).position).toEqual(before.position);expect((await inspect(page)).mapZoom).toBe(1);
+ await page.locator('#camera-zoom-in').click();await page.locator('#camera-zoom-in').click();await expect(output).toHaveText('175%');await expect(page.locator('#camera-zoom-in')).toBeDisabled();await page.locator('#camera-zoom-reset').click();await expect.poll(async()=>(await inspect(page)).zoom).toBeLessThan(1.01);
+ await page.locator('#camera-zoom-out').click();await expect(output).toHaveText('75%');await expect(page.locator('#camera-zoom-out')).toBeDisabled();await expect.poll(async()=>(await inspect(page)).zoom).toBeLessThan(.76);
+ await page.locator('#camera-zoom-reset').click();await act(page,-10,-1);await page.locator('#camera-zoom-in').click();await expect(output).toHaveText('125%');await expect.poll(async()=>(await inspect(page)).zoom).toBeGreaterThan(1.24);
+ await openTools(page);await page.locator('[data-page="map"]').first().click();await expect(page.locator('#map-zoom-value')).toHaveText('100%');await page.locator('#map-zoom-in').click();await close(page);await expect(output).toHaveText('125%');
+ await page.reload();await page.locator('#start').click();await expect(output).toHaveText('125%');await expect(page.locator('#level-title')).toContainText('레벨 1');await expect.poll(async()=>(await inspect(page)).zoom).toBeGreaterThan(1.24);
+ await page.setViewportSize({width:800,height:850});await page.locator('#camera-zoom-in').click();await expect(output).toHaveText('150%');const box=await page.locator('.camera-controls').boundingBox();expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(800);expect(box.y+box.height).toBeLessThanOrEqual(850);await page.screenshot({path:'docs/game-camera-zoom.png'});
+});

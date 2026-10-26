@@ -76,7 +76,7 @@ let state,
 let tracked = null;
 let criticalUntil = 0;
 const app = $("#app");
-app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day" id="day-time">한국 시간 · 개인 체험</span></div><div class="activity-chip" id="activity-time" title="이 창을 보고 있는 동안의 활동 시간 · 이 브라우저에 저장">이번 활동 00:00</div><button id="tools-toggle" class="tools-toggle" aria-expanded="false" aria-controls="explore-tools">탐험 도구 ☰</button></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">OUR VILLAGE JOURNEY</span><h2 id="level-title">레벨 1 · 학교</h2><p id="level-goal" class="small"></p><div id="quests"></div><div class="counter" hidden><span>우리 동네 수호대 스탬프</span><b id="badge-count">0 / 3</b></div><div class="progress" hidden><i id="progress"></i></div><div id="guardian-stamps" class="stamp-strip" hidden></div><button id="guardian-open" class="guardian-open">스탬프 3개 모으기 · 미션 안내</button></section><nav id="explore-tools" class="sidebar" aria-label="탐험 도구" hidden><button class="nav-btn" data-page="map" aria-label="마을 지도"><span>⌘</span>마을 지도</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="마을 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><aside id="mission-reminder" class="mission-reminder" role="status" aria-live="polite" hidden><div><b>지금 할 일</b><p id="mission-reminder-text"></p></div><button id="reminder-dismiss" aria-label="미션 안내 닫기">×</button></aside><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
+app.innerHTML = `<main class="game"><div id="world" class="world"></div><div class="hud"><header class="topbar"><div class="brand"><div class="brand-mark">♧</div><div><h1>금산마을 탐험대</h1><p>GEUMSAN · LITTLE EXPLORERS</p></div></div><div class="location"><span class="sun"></span><strong id="place">학교 앞 산책길</strong><span class="day" id="day-time">한국 시간 · 개인 체험</span></div><div class="activity-chip" id="activity-time" title="이 창을 보고 있는 동안의 활동 시간 · 이 브라우저에 저장">이번 활동 00:00</div><button id="tools-toggle" class="tools-toggle" aria-expanded="false" aria-controls="explore-tools">탐험 도구 ☰</button></header><section class="quest-card" aria-label="활동 진행"><span class="eyebrow">OUR VILLAGE JOURNEY</span><h2 id="level-title">레벨 1 · 학교</h2><p id="level-goal" class="small"></p><div id="quests"></div><div class="counter" hidden><span>우리 동네 수호대 스탬프</span><b id="badge-count">0 / 3</b></div><div class="progress" hidden><i id="progress"></i></div><div id="guardian-stamps" class="stamp-strip" hidden></div><button id="guardian-open" class="guardian-open">스탬프 3개 모으기 · 미션 안내</button></section><nav id="explore-tools" class="sidebar" aria-label="탐험 도구" hidden><button class="nav-btn" data-page="map" aria-label="마을 지도"><span>⌘</span>마을 지도</button><button class="nav-btn" data-page="bag"><span>♧</span>내 가방</button><button class="nav-btn" data-page="settings"><span>⚙</span>설정</button></nav><div class="camera-controls" role="group" aria-label="게임 화면 확대와 축소"><span>화면 크기</span><div><button id="camera-zoom-out" aria-label="게임 화면 축소" title="마을을 더 넓게 보기">−</button><output id="camera-zoom-value" aria-live="polite">100%</output><button id="camera-zoom-in" aria-label="게임 화면 확대" title="캐릭터를 더 크게 보기">＋</button></div><button id="camera-zoom-reset">기본 크기</button></div><button id="interact" class="interaction" hidden></button><div class="bottom"><div class="controls-hint"><kbd>W A S D</kbd><span>또는 방향키로 걷기</span><kbd>E</kbd><span>가까이에서 이야기하기</span></div><button class="mini-map" data-page="map" aria-label="마을 지도 열기"><p>나의 작은 마을 <span>↗</span></p><canvas id="mini" width="210" height="150"></canvas></button></div><aside id="mission-reminder" class="mission-reminder" role="status" aria-live="polite" hidden><div><b>지금 할 일</b><p id="mission-reminder-text"></p></div><button id="reminder-dismiss" aria-label="미션 안내 닫기">×</button></aside><div class="touch-controls" aria-label="방향 버튼"><button data-key="w" aria-label="앞으로">↑</button><button data-key="a" aria-label="왼쪽으로">←</button><button data-key="s" aria-label="뒤로">↓</button><button data-key="d" aria-label="오른쪽으로">→</button></div></div><div class="loading" id="loading"><span class="welcome-icon">🌱</span><h2>작은 마을을 준비하고 있어요</h2><p>산책길에 햇살을 채우는 중…</p></div></main><div id="toast" class="toast" role="status" hidden></div><div class="printed"></div>`;
 function toast(message, critical = false) {
   if (!critical && Date.now() < criticalUntil) return;
   if (critical) criticalUntil = Date.now() + 8000;
@@ -150,6 +150,21 @@ if(!isGuardian(state))state.journey.sessionEnded=false;
 function setTools(visible){const nav=$("#explore-tools");if(!nav)return;nav.hidden=!visible;$("#tools-toggle").setAttribute("aria-expanded",String(visible));}
 $("#tools-toggle").onclick=()=>setTools($("#explore-tools").hidden);
 $("#world").addEventListener("pointerdown",()=>setTools(false));
+function renderCameraZoom(){
+ const zoom=state.settings.cameraZoom??1;
+ $("#camera-zoom-value").textContent=`${Math.round(zoom*100)}%`;
+ $("#camera-zoom-out").disabled=zoom<=0.75;
+ $("#camera-zoom-in").disabled=zoom>=1.75;
+}
+function changeCameraZoom(value){
+ if(!world||modal)return;
+ state.settings.cameraZoom=Math.min(1.75,Math.max(0.75,value));
+ renderCameraZoom();persist();
+}
+$("#camera-zoom-out").onclick=()=>changeCameraZoom((state.settings.cameraZoom??1)-0.25);
+$("#camera-zoom-in").onclick=()=>changeCameraZoom((state.settings.cameraZoom??1)+0.25);
+$("#camera-zoom-reset").onclick=()=>changeCameraZoom(1);
+renderCameraZoom();
 const reminders=new MissionReminders();
 let reminderTimeout;
 function hideMissionReminder(){clearTimeout(reminderTimeout);$("#mission-reminder").hidden=true;}
@@ -1157,6 +1172,7 @@ function validateState(s) {
     !s.lake ||
     typeof s.lake !== "object" ||
     !s.settings ||
+    (s.settings.cameraZoom!==undefined&&(!Number.isFinite(s.settings.cameraZoom)||s.settings.cameraZoom<0.75||s.settings.cameraZoom>1.75)) ||
     (s.settings.mapZoom!==undefined&&(!Number.isFinite(s.settings.mapZoom)||s.settings.mapZoom<1||s.settings.mapZoom>3)) ||
     ![5, 15, 30].includes(+s.settings.artLimit) ||
     ![1, 1.15, 1.3].includes(+s.settings.font)
@@ -1173,6 +1189,7 @@ function applySettings() {
   );
   document.documentElement.style.fontSize = `${16 * state.settings.font}px`;
   world?.configure(state.settings);
+  renderCameraZoom();
   clearInterval(audioTimer);
   audioTimer = null;
   if (!state.settings.sound) {
