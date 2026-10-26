@@ -71,7 +71,13 @@ export class VillageAudio {
   const now=ctx.currentTime,delay=kind==='step' ? .28 : kind==='celebrate' ? 5 : .1;
   if(now-(this.last.get(kind)??-Infinity)<delay)return false;
   this.last.set(kind,now);
-  if(kind==='step'){this.noise(now,.095,.28,1800);this.tone(620+Math.random()*100,now,.08,.035,'sine',380)}
+  if(kind==='step'){
+   // A short low-mid footfall stays audible under the bell/pluck music.
+   // The brighter grass rustle alone was too quiet on laptop speakers.
+   this.tone(300+Math.random()*30,now,.15,.42,'sine',170);
+   this.noise(now+.012,.13,.34,2200);
+   this.tone(760+Math.random()*60,now+.018,.09,.08,'sine',480);
+  }
   else if(kind==='page'){this.noise(now,.17,.23,2400);this.noise(now+.055,.13,.13,4200)}
   else if(kind==='correct'){this.tone(660,now,.23,.16);this.tone(880,now+.15,.42,.15);this.tone(1320,now+.15,.3,.035)}
   else if(kind==='wrong'){this.tone(330,now,.18,.13,'triangle',270);this.tone(250,now+.13,.27,.1,'sine',185)}
