@@ -4,8 +4,6 @@
 
 [설치 없이 플레이](https://rkdrkals0227.github.io/Idea-prj-_ver1/) · [실시한 검증](docs/VALIDATION.md)
 
-[IDEA 멘토·멘티 수업 설계 안내서 읽기 및 Word·PDF 다운로드](https://rkdrkals0227.github.io/Idea-prj-_ver1/mentor-guide/)
-
 ![세 미션 성공 화면](docs/three-level-success.png)
 
 금산면의 장소 이름을 모티브로 만든 수업용 축약 마을입니다. 실제 길 안내가 아니며, 가상의 주민은 동물의 실제 서식 증거가 아닙니다. 학급 규칙은 9월 학급 회의에서 4-4반 아이들이 정한 약속입니다.
